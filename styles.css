@@ -1,3 +1,4 @@
+/* Set global styles */
 body {
   background-color: palevioletred;
   margin: 0;
@@ -13,6 +14,7 @@ body:hover {
   overflow-y: scroll;
 }
 
+/* Style the header */
 header {
   width: 100%;
 }
@@ -56,6 +58,7 @@ header {
   margin: 0;
 }
 
+/* Style the tab content */
 .tab-content {
   display: none;
 }
@@ -63,6 +66,8 @@ header {
 .CreateLiveFeedGroup {
   display: flex;
   align-items: center;
+  justify-content: center;
+  margin: 20px auto;
 }
 
 .CreateLiveFeedGroup > * {
@@ -86,15 +91,6 @@ header {
   box-shadow: 0 0px 0px rgb(109, 156, 245);
 }
 
-
-.CreateLiveFeedGroup {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 20px auto;
-}
-
-
 .CreateLiveFeedGroup button {
   margin-right: 10px;
 }
@@ -105,7 +101,7 @@ header {
 
 #review-tab {
   width: 100%;
-  display: none;
+  display: block;
 }
 
 .miniLiveFeeds {
@@ -118,7 +114,7 @@ header {
   align-items: center;
 }
 
-.miniFeeds{
+.miniFeeds {
   width: auto;
   height: 40%;
 }
@@ -130,7 +126,6 @@ header {
   margin: 60px auto 10px auto;
   padding-bottom: 40px;
 }
-
 
 .largeIframe,
 .largeCanvas {
@@ -155,7 +150,7 @@ header {
   height: 60px;
   background-color: rgb(255, 192, 203);
   color: rgb(228, 91, 114);
-  white-space: nowrap;
+  display: flex;
   justify-content: center;
   align-items: center;
   text-align: center;

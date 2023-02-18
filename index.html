@@ -10,52 +10,55 @@
 <body>
   <header>
     <div class="header-text">
-      <button data-tab="review" class="header-button header-button-selected"><p>⏺</p></button>
-      <button data-tab="help" class="header-button header-button-nonselected"><p>❓</p></button>
+      <button data-tab="review" class="header-button header-button-selected">⏺</button>
+      <button data-tab="help" class="header-button header-button-nonselected">❓</button>
       <h1>Live Board Reviews</h1>
     </div>
   </header>
 
-
-  <div style="display: block;"" class="tab-content" id="review-tab">
+  <div class="tab-content" id="review-tab">
     <div class="CreateLiveFeedGroup">
       <button id="createButton" class="createFeed">Create</button>
       <label for="livefeedinput">Live feed:</label>
       <input type="text" id="livefeedinput">
       <label for="stonesize">Resize stones:</label>
-      <input type="range" id="stonesize" min="70" max="100" value="80"><p id="slider-output"></p>
+      <input type="range" id="stonesize" min="70" max="100" value="80">
+      <p id="slider-output"></p>
     </div>
 
-    <div height="480" id="miniLiveFeedDiv" class="miniLiveFeeds">
-
-    </div>
+    <div id="miniLiveFeedDiv" class="miniLiveFeeds"></div>
 
     <div class="largeSingleFeed">
-      <iframe id="review_feed"  class="largeIframe"></iframe>
+      <iframe id="review_feed" class="largeIframe"></iframe>
       <canvas id="review_canvas" class="largeCanvas"></canvas>
     </div>
   </div>
 
   <div class="tab-content" id="help-tab">
-    <!-- Content for the help tab goes here -->
     <p>Help Me!</p>
   </div>
 
-  <div height="40" class="footer">
-    <p> Copyright © TangJieHao 2023. All Rights Reserved. </p>
-    <p> This website was designed and developed by TangJieHao. </p>
+  <div class="footer">
+    <p> Copyright © TangJieHao 2023. All Rights Reserved. This website was designed and developed by TangJieHao.  </p>
   </div>
+
+  <script src="src/canvas.js"></script>
+  <script src="src/constants.js"></script>
+  <script src="src/elements.js"></script>
+  <script src="src/session.js"></script>
+  <script src="src/video.js"></script>
+  <script src="src/main.js"></script>
 
   <script>
     let buttons = document.querySelectorAll('.header-button');
     let reviewTab = document.getElementById('review-tab');
     let helpTab = document.getElementById('help-tab');
+    let slider = document.getElementById('stonesize');
+    let output = document.getElementById('slider-output');
 
-    let slider = document.getElementById("stonesize");
-    let output = document.getElementById("slider-output");
     output.textContent = slider.value;
 
-    slider.addEventListener("input", function() {
+    slider.addEventListener('input', function() {
       output.textContent = this.value;
     });
 
@@ -64,23 +67,18 @@
         buttons.forEach(function(btn) {
           btn.classList.remove('header-button-selected');
         });
+
         button.classList.add('header-button-selected');
 
-        if (button.getAttribute('data-tab') === 'review') {
-          reviewTab.style.display = 'block';
-          helpTab.style.display = 'none';
-        } else {
+        if (button.getAttribute('data-tab') === 'help') {
           reviewTab.style.display = 'none';
           helpTab.style.display = 'block';
+        } else {
+          reviewTab.style.display = 'block';
+          helpTab.style.display = 'none';
         }
       });
     });
   </script>
-  <script src="src/canvas.js"></script>
-  <script src="src/constants.js"></script>
-  <script src="src/elements.js"></script>
-  <script src="src/session.js"></script>
-  <script src="src/video.js"></script>
-  <script src="src/main.js"></script>
 </body>
 </html>
