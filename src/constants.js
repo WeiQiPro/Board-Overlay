@@ -37,6 +37,16 @@ const ELEMENT = {
   ID: {}
 }
 
+const STONES = {
+  BLACK: new Image(),
+  WHITE: new Image(),
+  MARKER: new Image(),
+}
+
+STONES.BLACK.src = './img/black_stone.png'
+STONES.WHITE.src = './img/white_stone.png'
+STONES.MARKER.src = './img/stone_marker.png'
+
 const NUMBERS = {
   PI: 2 * Math.PI
 }

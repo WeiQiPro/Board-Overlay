@@ -22,6 +22,8 @@
       <button id="createButton" class="createFeed">Create</button>
       <label for="livefeedinput">Live feed:</label>
       <input type="text" id="livefeedinput">
+      <label for="stonesize">Resize stones:</label>
+      <input type="range" id="stonesize" min="70" max="100" value="80"><p id="slider-output"></p>
     </div>
 
     <div height="480" id="miniLiveFeedDiv" class="miniLiveFeeds">
@@ -48,6 +50,14 @@
     let buttons = document.querySelectorAll('.header-button');
     let reviewTab = document.getElementById('review-tab');
     let helpTab = document.getElementById('help-tab');
+
+    let slider = document.getElementById("stonesize");
+    let output = document.getElementById("slider-output");
+    output.textContent = slider.value;
+
+    slider.addEventListener("input", function() {
+      output.textContent = this.value;
+    });
 
     buttons.forEach(function(button) {
       button.addEventListener('click', function() {

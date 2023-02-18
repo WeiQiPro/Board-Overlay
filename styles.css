@@ -2,6 +2,15 @@ body {
   background-color: palevioletred;
   margin: 0;
   padding: 0;
+  overflow: hidden;
+}
+
+body::-webkit-scrollbar {
+  display: none;
+}
+
+body:hover {
+  overflow-y: scroll;
 }
 
 header {
@@ -50,6 +59,33 @@ header {
 .tab-content {
   display: none;
 }
+
+.CreateLiveFeedGroup {
+  display: flex;
+  align-items: center;
+}
+
+.CreateLiveFeedGroup > * {
+  margin-right: 8px;
+}
+
+.CreateLiveFeedGroup > *:last-child {
+  margin-right: 0;
+}
+
+#createButton {
+  background-color: rgb(235, 130, 126);
+  color: rgb(0, 0, 0);
+  border: 1px solid black;
+  border-radius: 15px;
+  box-shadow: 0 5px 0px palevioletred;
+}
+
+#createButton:active {
+  background-color: rgb(109, 156, 245);
+  box-shadow: 0 0px 0px rgb(109, 156, 245);
+}
+
 
 .CreateLiveFeedGroup {
   display: flex;

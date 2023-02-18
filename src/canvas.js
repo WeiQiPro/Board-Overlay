@@ -4,7 +4,7 @@ class Canvas {
     this.context = this.canvas.getContext('2d');
     this.canvas.width = CONST.CANVAS.WIDTH;
     this.canvas.height = CONST.CANVAS.HEIGHT;
-    this.stones_radius = 30
+    this.stones_radius = document.getElementById('stonesize').value
     this.stones = [];
 
     // bind event listeners
@@ -14,24 +14,32 @@ class Canvas {
   }
 
   tick() {
+    this.stones_radius = document.getElementById('stonesize').value
+    let last_item_index = this.stones.length - 1;
     this.clear_canvas();
     for (const stone of this.stones) {
       this.draw_circle(stone);
     }
+    if (this.stones[last_item_index] !== undefined) {
+      let stone_to_be_marked = this.stones[last_item_index];
+      this.draw_marker(stone_to_be_marked);
+    }
   }
+
 
   clear_canvas() {
     this.context.clearRect(0, 0, CONST.CANVAS.WIDTH, CONST.CANVAS.HEIGHT);
   }
 
   draw_circle([mouse_x, mouse_y, stone_color]) {
-    this.context.save();
-    this.context.beginPath();
-    this.context.arc(mouse_x, mouse_y, this.stones_radius, 0, NUMBERS.PI);
-    this.context.fillStyle = stone_color;
-    this.context.fill();
-    this.context.closePath();
-    this.context.restore();
+    let offset = this.stones_radius / 2
+    this.context.drawImage(stone_color, mouse_x - offset, mouse_y - offset, this.stones_radius, this.stones_radius)
+  }
+
+  draw_marker([mouse_x, mouse_y, stone_color]){
+    let marker_size = this.stones_radius / 2
+    let offset = this.stones_radius / 4
+    this.context.drawImage(STONES.MARKER, mouse_x - offset, mouse_y - offset, marker_size, marker_size)
   }
 
   handle_mouse_down(event) {
@@ -39,9 +47,9 @@ class Canvas {
     let [x, y] = this.getCanvasCoords(event.clientX - left, event.clientY - top);
 
     if (event.button === 0) { // left click
-      this.stones.push([x, y, 'black']);
+      this.stones.push([x, y, STONES.BLACK]);
     } else if (event.button === 2) { // right click
-      this.stones.push([x, y, 'white']);
+      this.stones.push([x, y, STONES.WHITE]);
     }
 
     this.check_for_overlapping_stones()
