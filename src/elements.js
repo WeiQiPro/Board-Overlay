@@ -84,6 +84,7 @@ function iframe_attributes_and_style(iframe){
   iframe.style.border = CONST.NONE
   iframe.allowfullscreen = CONST.TRUE
   iframe.allow = CONST.ALLOW
+  iframe.muted = CONST.TRUE
 }
 
 function canvas_attributes_and_style(canvas){
