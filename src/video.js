@@ -16,7 +16,7 @@ class Video{
       let twitchChannelMatch = this.source.match(twitchChannelRegex);
       if (twitchChannelMatch) {
         let channelName = twitchChannelMatch[1];
-        this.source = `https://player.twitch.tv/?channel=${channelName}&parent=weiqipro.github.io/&muted=true`;
+        this.source = `https://player.twitch.tv/?channel=${channelName}&parent=weiqipro.github.io&muted=true`;
       }
     }
 
@@ -27,7 +27,7 @@ class Video{
     this.iframe.frameborder = CONST.ZERO
     this.iframe.allowfullscreen = CONST.TRUE
     this.iframe.style.border = CONST.NONE
-    this.iframe.style.boxShadow = "10px 10px 10px rgba(0, 0, 0, 0.6)";
+    this.iframe.style.boxShadow = "10px 10px 10px 10px rgba(0, 0, 0, 0.6)";
 
   }
 
