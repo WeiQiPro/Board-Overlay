@@ -1,0 +1,139 @@
+body{
+  background-color: #F58A07;
+  margin: 0;
+  padding: 0;
+}
+
+#header {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  background-color: #084887;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100px;
+  box-shadow: 2px 2px 2px 2px #242B42;
+}
+
+#headerLiveButton {
+  position: relative;
+  background-color: #F9AB55;
+  width: 90px;
+  height: 50px;
+  border-radius: 25%;
+  border: none;
+  font-size: x-large;
+  color: black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#headerHelpButton {
+  position: relative;
+  background-color: #F9AB55;
+  width: 90px;
+  height: 50px;
+  border-radius: 25%;
+  border: none;
+  font-size: x-large;
+  color: black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#headerLiveButton:hover, #headerHelpButton:hover{
+  background-color: yellow;
+}
+
+#headerLiveButton:active, #headerHelpButton:active{
+  background-color: palevioletred;
+  box-shadow: 5px 5px 5px black;
+}
+
+#headerWebsiteName {
+  display: inline-block;
+  color: #F7F5FB;
+  font-size: 400%;
+}
+
+#Review {
+  display: flex;
+  flex-direction: column;
+}
+
+#Controls {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  position: absolute;
+  top: 50%;
+  color: #F7F5FB;
+}
+
+#ReviewTab {
+  display: flex;
+  flex-direction: row;
+  position: relative;
+  top: 20px;
+  background-color: #242B42;
+  border: 20px solid #F58A07;
+  width: 98%;
+  height: 1000px;
+  justify-content: center;
+  align-items: center;
+}
+
+#ReviewBoards {
+  display: flex;
+  position: relative;
+  left: 0px;
+  background-color: pink;
+  width: 1280px;
+  height: 720px;
+}
+
+#ReviewIframe, #ReviewCanvas {
+  display: flex;
+  position: absolute;
+  background-color: lightblue;
+  width: 1280px;
+  height: 720px;
+}
+
+#MiniBoards {
+  display: flex;
+  flex-direction: column;
+  margin-left: 50px;
+  background-color: darkcyan;
+  width: 360px;
+  height: 720px;
+}
+
+.MiniLiveFeeds{
+  display: flex;
+  position: absolute;
+  background-color: #F58A07;
+  width: 360px;
+  height: 146px;
+}
+
+#MiniContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+#MiniButton {
+  display: flex;
+  position: relative;
+  top: 146px;
+  background-color: #F9AB55;
+  color: #F7F5FB;
+  width: 100%;
+  height: 35px;
+  justify-content: center;
+  align-items: center;
+}
