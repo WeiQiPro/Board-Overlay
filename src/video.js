@@ -16,7 +16,7 @@ class Video{
       let twitchChannelMatch = this.source.match(twitchChannelRegex);
       if (twitchChannelMatch) {
         let channelName = twitchChannelMatch[1];
-        this.source = `https://player.twitch.tv/${channelName}?parent=weiqipro.github.io&muted=true`;
+        this.source = `https://player.twitch.tv/?channel=${channelName}&parent=weiqipro.github.io&muted=true`;
       }
     }
 
