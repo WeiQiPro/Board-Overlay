@@ -2,6 +2,15 @@ body{
   background-color: #F58A07;
   margin: 0;
   padding: 0;
+  overflow: hidden;
+}
+
+body::-webkit-scrollbar {
+  display: none;
+}
+
+body:hover {
+  overflow-y: scroll;
 }
 
 #header {
@@ -68,8 +77,7 @@ body{
   display: flex;
   flex-direction: row;
   justify-content: space-evenly;
-  position: absolute;
-  top: 50%;
+  top: 100px;
   color: #F7F5FB;
 }
 
