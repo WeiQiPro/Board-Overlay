@@ -258,6 +258,8 @@ function main() {
 
         VIDEO.addEventListener("click", () => {
             new Video(URL.value, "feed");
+            document.title = "URL.value";
+
 
             if (FEED.audioContext.state === 'suspended') {
                 audioContext.resume();
