@@ -1,6 +1,8 @@
 # Board-Overlay
 
 This is a simplified version of board-overlay:
+Once you have added the room name and the video has loaded
+ you only need to click 3 adjacent corners.
 
 ## Controls:
 - Stone Size is manual, just adjust by replacing the 80.
