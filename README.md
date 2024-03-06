@@ -1,11 +1,20 @@
 # Board-Overlay
 
-I built this app to provide a way for commentators to follow the current game while its play.
-right mouse button is Black stone
-left mouse button is White stone
-Middle mouse button is to clear stones
+This is a simplified version of board-overlay:
 
-Click "review" button to switch live feed of the big board
-known issue is that its not responsive as quickly as I would like.
+Controls:
+Stone Size is manual, just adjust by replacing the 80;
+
+Left mouse is black stone
+Right mouse is white stone
+Space to clear ALL The stones
+
+To delete a stone:
+    same color click
+To Change a stone color;
+    opposite color click
+
+Add the appropriate VDO room name to view the feed.
+
 
 https://weiqipro.github.io/Board-Overlay/

@@ -8,77 +8,32 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header>
-    <div class="header-text">
-      <button data-tab="review" class="header-button header-button-selected">⏺</button>
-      <button data-tab="help" class="header-button header-button-nonselected">❓</button>
-      <h1>Live Board Reviews</h1>
+  <div class="page-container">
+    <div class="hot-bar">
+      <button id="VideoButton">Add Video</button>
+      <input type="text" id="VideoURL" value="Room Name Here" style="width: 100px;">
+      <label for="StoneSize">Stone Size:</label>
+      <input type="number" id="StoneSize" value="80" style="width: 50px;">
+      <p>⚫:</p>
+      <img src="./img/LMC.png" width="50" height="50" alt="Black Stone">
+      <p>⚪:</p>
+      <img src="./img/RMC.png" width="50" height="50" alt="White Stone">
+      <p>Clear:</p>
+      <img src="./img/SB.png" width="50" height="50"  alt="Clear Stones">
+      <!-- Add your infographic or any additional information related to usage here -->
     </div>
-  </header>
-
-  <div class="tab-content" id="review-tab">
-    <div class="CreateLiveFeedGroup">
-      <button id="createButton" class="createFeed">Create</button>
-      <label for="livefeedinput">Live feed:</label>
-      <input type="text" id="livefeedinput">
-      <label for="stonesize">Resize stones:</label>
-      <input type="range" id="stonesize" min="70" max="100" value="80">
-      <p id="slider-output"></p>
-    </div>
-
-    <div id="miniLiveFeedDiv" class="miniLiveFeeds"></div>
-
-    <div class="largeSingleFeed">
-      <iframe id="review_feed" class="largeIframe"></iframe>
-      <canvas id="review_canvas" class="largeCanvas"></canvas>
-    </div>
-  </div>
-
-  <div class="tab-content" id="help-tab">
-    <p>Help Me!</p>
+    
+    <div class="content-area">
+      <div class="main-feed">
+        <iframe id="feed" class="largeIframe" allow="autoplay"></iframe>
+        <canvas id="overlay" class="largeCanvas"></canvas>
+      </div>
   </div>
 
   <div class="footer">
-    <p> Copyright © TangJieHao 2023. All Rights Reserved. This website was designed and developed by TangJieHao.  </p>
+    <p> Copyright © TangJieHao 2023. All Rights Reserved. This website was designed and developed by TangJieHao. </p>
   </div>
 
-  <script src="src/canvas.js"></script>
-  <script src="src/constants.js"></script>
-  <script src="src/elements.js"></script>
-  <script src="src/session.js"></script>
-  <script src="src/video.js"></script>
-  <script src="src/main.js"></script>
-
-  <script>
-    let buttons = document.querySelectorAll('.header-button');
-    let reviewTab = document.getElementById('review-tab');
-    let helpTab = document.getElementById('help-tab');
-    let slider = document.getElementById('stonesize');
-    let output = document.getElementById('slider-output');
-
-    output.textContent = slider.value;
-
-    slider.addEventListener('input', function() {
-      output.textContent = this.value;
-    });
-
-    buttons.forEach(function(button) {
-      button.addEventListener('click', function() {
-        buttons.forEach(function(btn) {
-          btn.classList.remove('header-button-selected');
-        });
-
-        button.classList.add('header-button-selected');
-
-        if (button.getAttribute('data-tab') === 'help') {
-          reviewTab.style.display = 'none';
-          helpTab.style.display = 'block';
-        } else {
-          reviewTab.style.display = 'block';
-          helpTab.style.display = 'none';
-        }
-      });
-    });
-  </script>
+  <script text="html" src="./APP.js"></script>
 </body>
 </html>
