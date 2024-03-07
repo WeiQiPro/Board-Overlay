@@ -95,10 +95,7 @@ class Canvas {
     }
 
     markLastStone() {
-        if (this.stones.length > 0) {
-            const lastStone = this.stones[this.stones.length - 1];
-            this.drawMarker(lastStone);
-        }
+        this.stones.forEach(stone => this.drawCircle(stone));
     }
 
     drawCircle([mouse_x, mouse_y, stone_color]) {
