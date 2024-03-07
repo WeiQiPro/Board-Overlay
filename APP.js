@@ -5,6 +5,7 @@ const CANVAS = document.getElementById("overlay");
 const CONTEXT = CANVAS.getContext("2d");
 const VIDEO = document.getElementById("VideoButton")
 const URL = document.getElementById("VideoURL")
+const STYLE = document.getElementById("StyleButton");
 const GRIDSIZE = 2;
 
 const CONST = {
@@ -42,11 +43,14 @@ class Canvas {
     constructor(element) {
         this.canvas = document.getElementById(element);
         this.context = this.canvas.getContext('2d');
+        this.style = document.getElementById("StyleButton");
         this.initializeCanvas();
         this.stones = [];
         this.grid = [];
         this.points = [];
         this.isGridSet = false;
+        this.controlStyle = 0;
+        this.currentColor = "BLACK";
         this.bindEventListeners();
     }
 
@@ -56,11 +60,17 @@ class Canvas {
     }
 
     bindEventListeners() {
-        // Binding mouse and custom event listeners
         this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
         this.canvas.addEventListener('contextmenu', this.handleContextMenu.bind(this));
         document.addEventListener('keydown', this.handleKeyDown.bind(this));
+        this.style.addEventListener("click", () => {
+            console.log("clicked");
+            console.log((this.style.innerText == "Control: Simple"))
+            this.style.innerText = (this.style.innerText == "Control: Simple") ? "Control: Alternate" : "Control: Simple";
+            this.controlStyle = (this.controlStyle == 0) ? 1 : 0;
+        });
     }
+
 
     tick() {
         this.updateStonesRadius();
@@ -76,7 +86,7 @@ class Canvas {
                 for (let j = 0; j < this.grid[i].length; j++) {
                     const point = this.grid[i][j];
                     this.context.fillStyle = 'white'; // Adjust color as needed
-                    this.context.fillRect(point[0] - GRIDSIZE/2, point[1] - GRIDSIZE/2, GRIDSIZE, GRIDSIZE); // Adjust size as needed
+                    this.context.fillRect(point[0] - GRIDSIZE / 2, point[1] - GRIDSIZE / 2, GRIDSIZE, GRIDSIZE); // Adjust size as needed
                 }
             }
         }
@@ -110,6 +120,19 @@ class Canvas {
     }
 
     handleMouseDown(event) {
+
+        switch (this.controlStyle) {
+            case 0:
+                this.handleMouseDownBTV(event);
+                break;
+            case 1:
+                this.handleMouseDownOGS(event);
+                break;
+        }
+
+    }
+
+    handleMouseDownBTV(event) {
         event.preventDefault();
         let { left, top } = this.canvas.getBoundingClientRect();
         let [cx, cy] = this.getCanvasCoords(event.clientX - left, event.clientY - top);
@@ -139,6 +162,46 @@ class Canvas {
             } else {
                 // No stone exists at the point, add a new stone
                 this.stones.push([point[0], point[1], STONES[stoneColor]]);
+            }
+        }
+    }
+
+    handleMouseDownOGS(event) {
+        event.preventDefault();
+        let { left, top } = this.canvas.getBoundingClientRect();
+        let [cx, cy] = this.getCanvasCoords(event.clientX - left, event.clientY - top);
+
+        // Assuming this.isGridSet is true when the grid is ready
+        if (this.points.length < 3) {
+            console.log(cx, cy);
+            this.points.push([cx, cy]);
+            if (this.points.length === 3) {
+                this.grid = this.generateGrid(this.points);
+                this.isGridSet = true;
+            }
+        } else if (this.isGridSet) {
+            let point = this.findClosestPoint(cx, cy, this.grid);
+            let stoneColor = this.currentColor
+            let existingStoneIndex = this.stones.findIndex(([x, y, color]) => x === point[0] && y === point[1]);
+
+            if (event.button === 1) {
+                this.stones.splice(existingStoneIndex, 1);
+                return;
+            }
+
+            if (existingStoneIndex >= 0) {
+                // Check if the existing stone's color is the same as the intended color
+                if (this.stones[existingStoneIndex][2] !== STONES[stoneColor]) {
+                    // If not, replace the stone's color with the new color
+                    this.stones[existingStoneIndex][2] = STONES[stoneColor];
+                } else {
+                    // If the color is the same, remove the stone (toggle off)
+                    this.stones.splice(existingStoneIndex, 1);
+                }
+            } else {
+                // No stone exists at the point, add a new stone
+                this.stones.push([point[0], point[1], STONES[stoneColor]]);
+                this.currentColor = this.currentColor == "BLACK" ? "WHITE" : "BLACK";
             }
         }
     }
