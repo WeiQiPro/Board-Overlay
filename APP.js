@@ -266,14 +266,16 @@ class Canvas {
     generateGrid(points) {
         // Generate an empty board 
         const grid = Array.from({ length: 19 }, () => Array.from({ length: 19 }).fill(0));
-        const width_diff = (points[1][1] - points[0][1]) / 18
-        const length_diff = (points[2][0] - points[0][0]) / 18
+        const widthY_diff = (points[1][1] - points[0][1]) / 18;
+        const widthX_diff = (points[1][0] - points[0][0]) / 18;
+        const lengthX_diff = (points[2][0] - points[0][0]) / 18;
+        const lengthY_diff = (points[2][1] - points[0][1]) / 18;
 
         //Fill the rest of the board using the differences
         for (let i = 0; i < 19; i++) {
             for (let j = 0; j < 19; j++) {
-                const x = points[0][0] + i * length_diff;
-                const y = points[0][1] + j * width_diff;
+                const x = points[0][0] + i * lengthX_diff + j * widthX_diff;
+                const y = points[0][1] + j * widthY_diff + i * lengthY_diff;
                 grid[i][j] = [x, y];
             }
         }
