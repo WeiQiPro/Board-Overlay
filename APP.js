@@ -6,6 +6,7 @@ const CONTEXT = CANVAS.getContext("2d");
 const VIDEO = document.getElementById("VideoButton")
 const URL = document.getElementById("VideoURL")
 const STYLE = document.getElementById("StyleButton");
+const RESET = document.getElementById("ResetGrid");
 const GRIDSIZE = 2;
 
 const CONST = {
@@ -44,6 +45,7 @@ class Canvas {
         this.canvas = document.getElementById(element);
         this.context = this.canvas.getContext('2d');
         this.style = document.getElementById("StyleButton");
+        this.reset = document.getElementById("ResetGrid");
         this.initializeCanvas();
         this.stones = [];
         this.grid = [];
@@ -69,6 +71,12 @@ class Canvas {
             this.style.innerText = (this.style.innerText == "Control: Simple") ? "Control: Alternate" : "Control: Simple";
             this.controlStyle = (this.controlStyle == 0) ? 1 : 0;
         });
+        this.reset.addEventListener("click", ()=>{
+            this.isGridSet = false;
+            this.grid = [];
+            this.points = [];
+            this.stones = [];
+        })
     }
 
 
@@ -170,8 +178,7 @@ class Canvas {
         event.preventDefault();
         let { left, top } = this.canvas.getBoundingClientRect();
         let [cx, cy] = this.getCanvasCoords(event.clientX - left, event.clientY - top);
-
-        // Assuming this.isGridSet is true when the grid is ready
+    
         if (this.points.length < 3) {
             console.log(cx, cy);
             this.points.push([cx, cy]);
@@ -181,30 +188,39 @@ class Canvas {
             }
         } else if (this.isGridSet) {
             let point = this.findClosestPoint(cx, cy, this.grid);
-            let stoneColor = this.currentColor
             let existingStoneIndex = this.stones.findIndex(([x, y, color]) => x === point[0] && y === point[1]);
-
+    
+            // Decide the color of the stone to be placed
+            let stoneColor = this.currentColor; // Default to current color
+            if (event.shiftKey) {
+                // If Shift is pressed, temporarily switch to the opposite color for this placement only
+                stoneColor = this.currentColor === "BLACK" ? "WHITE" : "BLACK";
+            }
+    
             if (event.button === 1) {
                 this.stones.splice(existingStoneIndex, 1);
                 return;
             }
-
+    
             if (existingStoneIndex >= 0) {
-                // Check if the existing stone's color is the same as the intended color
+                // Logic for replacing or removing an existing stone
                 if (this.stones[existingStoneIndex][2] !== STONES[stoneColor]) {
-                    // If not, replace the stone's color with the new color
                     this.stones[existingStoneIndex][2] = STONES[stoneColor];
                 } else {
-                    // If the color is the same, remove the stone (toggle off)
                     this.stones.splice(existingStoneIndex, 1);
                 }
             } else {
-                // No stone exists at the point, add a new stone
+                // Place a new stone without affecting the normal alternation
                 this.stones.push([point[0], point[1], STONES[stoneColor]]);
-                this.currentColor = this.currentColor == "BLACK" ? "WHITE" : "BLACK";
+    
+                // Only alternate the current color on a normal left-click without Shift
+                if (!event.shiftKey) {
+                    this.currentColor = this.currentColor === "BLACK" ? "WHITE" : "BLACK";
+                }
             }
         }
     }
+    
 
 
     handleContextMenu(event) {
@@ -325,6 +341,18 @@ function main() {
                 audioContext.resume();
             }
         });
+
+        URL.addEventListener("keydown", (e)=> {
+            if(e.key == "Enter"){
+                new Video(URL.value, "feed");
+                document.title = URL.value;
+    
+    
+                if (FEED.audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+            }
+        })
 
         overlay = new Canvas("overlay");
 
