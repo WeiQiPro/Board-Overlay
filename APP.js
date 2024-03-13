@@ -71,7 +71,7 @@ class Canvas {
             this.style.innerText = (this.style.innerText == "Control: Simple") ? "Control: Alternate" : "Control: Simple";
             this.controlStyle = (this.controlStyle == 0) ? 1 : 0;
         });
-        this.reset.addEventListener("click", ()=>{
+        this.reset.addEventListener("click", () => {
             this.isGridSet = false;
             this.grid = [];
             this.points = [];
@@ -146,10 +146,10 @@ class Canvas {
         let [cx, cy] = this.getCanvasCoords(event.clientX - left, event.clientY - top);
 
         // Assuming this.isGridSet is true when the grid is ready
-        if (this.points.length < 3) {
+        if (this.points.length < 4) {
             console.log(cx, cy);
             this.points.push([cx, cy]);
-            if (this.points.length === 3) {
+            if (this.points.length === 4) {
                 this.grid = this.generateGrid(this.points);
                 this.isGridSet = true;
             }
@@ -178,30 +178,30 @@ class Canvas {
         event.preventDefault();
         let { left, top } = this.canvas.getBoundingClientRect();
         let [cx, cy] = this.getCanvasCoords(event.clientX - left, event.clientY - top);
-    
-        if (this.points.length < 3) {
+
+        if (this.points.length < 4) {
             console.log(cx, cy);
             this.points.push([cx, cy]);
-            if (this.points.length === 3) {
+            if (this.points.length === 4) {
                 this.grid = this.generateGrid(this.points);
                 this.isGridSet = true;
             }
         } else if (this.isGridSet) {
             let point = this.findClosestPoint(cx, cy, this.grid);
             let existingStoneIndex = this.stones.findIndex(([x, y, color]) => x === point[0] && y === point[1]);
-    
+
             // Decide the color of the stone to be placed
             let stoneColor = this.currentColor; // Default to current color
             if (event.shiftKey) {
                 // If Shift is pressed, temporarily switch to the opposite color for this placement only
                 stoneColor = this.currentColor === "BLACK" ? "WHITE" : "BLACK";
             }
-    
+
             if (event.button === 1) {
                 this.stones.splice(existingStoneIndex, 1);
                 return;
             }
-    
+
             if (existingStoneIndex >= 0) {
                 // Logic for replacing or removing an existing stone
                 if (this.stones[existingStoneIndex][2] !== STONES[stoneColor]) {
@@ -212,7 +212,7 @@ class Canvas {
             } else {
                 // Place a new stone without affecting the normal alternation
                 this.stones.push([point[0], point[1], STONES[stoneColor]]);
-    
+
                 // Only alternate the current color on a normal left-click without Shift
                 if (!event.shiftKey) {
                     this.currentColor = this.currentColor === "BLACK" ? "WHITE" : "BLACK";
@@ -220,7 +220,6 @@ class Canvas {
             }
         }
     }
-    
 
 
     handleContextMenu(event) {
@@ -263,22 +262,43 @@ class Canvas {
         return [clientX * scaleX, clientY * scaleY];
     }
 
-    generateGrid(points) {
-        // Generate an empty board 
-        const grid = Array.from({ length: 19 }, () => Array.from({ length: 19 }).fill(0));
-        const width_diff = (points[1][1] - points[0][1]) / 18
-        const length_diff = (points[2][0] - points[0][0]) / 18
+    generateGrid(rawPoints) {
+        // Sort points by y-coordinate (ascending), then split into top and bottom pairs
+        const sortedByY = rawPoints.slice().sort((a, b) => a[1] - b[1]);
+        const topPoints = sortedByY.slice(0, 2).sort((a, b) => a[0] - b[0]); // Sort by x-coordinate to get TL and TR
+        const bottomPoints = sortedByY.slice(2, 4).sort((a, b) => a[0] - b[0]); // Sort by x-coordinate to get BL and BR
 
-        //Fill the rest of the board using the differences
+        // Merge sorted points back into the correct TL, TR, BL, BR order
+        const points = [topPoints[0], topPoints[1], bottomPoints[0], bottomPoints[1]];
+
+        // Now, points are ordered as TL, TR, BL, BR
+
+        // Generate an empty board
+        const grid = Array.from({ length: 19 }, () => Array.from({ length: 19 }, () => [0, 0]));
+
+        // Bilinear interpolation function
+        function bilinearInterpolation(x, y, points) {
+            const [topLeft, topRight, bottomLeft, bottomRight] = points;
+
+            // Interpolate horizontally
+            const top = [topLeft[0] * (1 - x) + topRight[0] * x, topLeft[1] * (1 - x) + topRight[1] * x];
+            const bottom = [bottomLeft[0] * (1 - x) + bottomRight[0] * x, bottomLeft[1] * (1 - x) + bottomRight[1] * x];
+
+            // Interpolate vertically
+            return [top[0] * (1 - y) + bottom[0] * y, top[1] * (1 - y) + bottom[1] * y];
+        }
+
+        // Calculate grid points
         for (let i = 0; i < 19; i++) {
             for (let j = 0; j < 19; j++) {
-                const x = points[0][0] + i * length_diff;
-                const y = points[0][1] + j * width_diff;
-                grid[i][j] = [x, y];
+                const xFraction = j / 18; // Horizontal interpolation fraction
+                const yFraction = i / 18; // Vertical interpolation fraction
+
+                grid[i][j] = bilinearInterpolation(xFraction, yFraction, points);
             }
         }
 
-        return grid
+        return grid;
     }
 
     distance(x1, y1, x2, y2) {
@@ -305,7 +325,6 @@ class Canvas {
     }
 }
 
-
 class Video {
     constructor(source, iframe) {
         this.iframe = document.getElementById(iframe)
@@ -329,6 +348,7 @@ class Video {
 
 let isEventSet = false;
 let overlay = null;
+
 function main() {
     if (!isEventSet) {
 
@@ -342,12 +362,12 @@ function main() {
             }
         });
 
-        URL.addEventListener("keydown", (e)=> {
-            if(e.key == "Enter"){
+        URL.addEventListener("keydown", (e) => {
+            if (e.key == "Enter") {
                 new Video(URL.value, "feed");
                 document.title = URL.value;
-    
-    
+
+
                 if (FEED.audioContext.state === 'suspended') {
                     audioContext.resume();
                 }
