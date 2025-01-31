@@ -74,7 +74,10 @@ class Canvas {
         });
         document.getElementById("GridElement").addEventListener("click", () => {
         this.show = !this.show
-        if(this.show) { document.getElementById("GridElement").text = "Grid: Yes" } else { document.getElementById("GridElement").text = "Grid: No" };
+            if (this.show) { 
+                document.getElementById("GridElement").style.innerText = "Grid: Yes" 
+            } else { document.getElementById("GridElement")..style.innerText = "Grid: No" 
+            };
         })
         this.reset.addEventListener("click", () => {
             this.isGridSet = false;
