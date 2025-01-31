@@ -73,10 +73,10 @@ class Canvas {
             this.controlStyle = (this.controlStyle == 0) ? 1 : 0;
         });
         document.getElementById("GridElement").addEventListener("click", () => {
-        this.show = !this.show
+            this.show = !this.show
             if (this.show) { 
                 document.getElementById("GridElement").style.innerText = "Grid: Yes" 
-            } else { document.getElementById("GridElement")..style.innerText = "Grid: No" 
+            } else { document.getElementById("GridElement").style.innerText = "Grid: No" 
             };
         })
         this.reset.addEventListener("click", () => {
