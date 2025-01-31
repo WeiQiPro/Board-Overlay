@@ -72,13 +72,19 @@ class Canvas {
             this.style.innerText = (this.style.innerText == "Control: Simple") ? "Control: Alternate" : "Control: Simple";
             this.controlStyle = (this.controlStyle == 0) ? 1 : 0;
         });
-        document.getElementById("GridElement").addEventListener("click", () => {
-            this.show = !this.show
-            if (this.show) { 
-                document.getElementById("GridElement").style.innerText = "Grid: Yes" 
-            } else { document.getElementById("GridElement").style.innerText = "Grid: No" 
-            };
-        })
+        document.getElementById("GridElement").addEventListener("click", function () {
+            this.show = !this.show; // This 'this' doesn't refer to your object, better use a variable
+            let gridElement = document.getElementById("GridElement");
+            
+            if (gridElement.dataset.show === "true") {
+                gridElement.innerText = "Grid: No";
+                gridElement.dataset.show = "false";
+            } else {
+                gridElement.innerText = "Grid: Yes";
+                gridElement.dataset.show = "true";
+            }
+        });
+
         this.reset.addEventListener("click", () => {
             this.isGridSet = false;
             this.grid = [];
