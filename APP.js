@@ -46,6 +46,7 @@ class Canvas {
         this.context = this.canvas.getContext('2d');
         this.style = document.getElementById("StyleButton");
         this.reset = document.getElementById("ResetGrid");
+        this.show = true;
         this.initializeCanvas();
         this.stones = [];
         this.grid = [];
@@ -71,6 +72,10 @@ class Canvas {
             this.style.innerText = (this.style.innerText == "Control: Simple") ? "Control: Alternate" : "Control: Simple";
             this.controlStyle = (this.controlStyle == 0) ? 1 : 0;
         });
+        document.getElementById("GridElement").addEventListener("click", () => {
+        this.show = !this.show
+        if(this.show) { document.getElementById("GridElement").text = "Grid: Yes" } else { document.getElementById("GridElement").text = "Grid: No" };
+        })
         this.reset.addEventListener("click", () => {
             this.isGridSet = false;
             this.grid = [];
@@ -89,7 +94,7 @@ class Canvas {
     }
 
     drawGrid() {
-        if (this.grid) {
+        if (this.grid && this.show) {
             for (let i = 0; i < this.grid.length; i++) {
                 for (let j = 0; j < this.grid[i].length; j++) {
                     const point = this.grid[i][j];
