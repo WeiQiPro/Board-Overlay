@@ -127,7 +127,7 @@ class Canvas {
     }
 
     markLastStone() {
-        this.stones.forEach(stone => this.drawMarker(stone));
+        this.stones.forEach((stone, index) => this.drawMarker(stone, index));
     }
 
     drawCircle([mouse_x, mouse_y, stone_color]) {
@@ -135,10 +135,12 @@ class Canvas {
         this.context.drawImage(stone_color, mouse_x - offset, mouse_y - offset, this.stones_radius, this.stones_radius);
     }
 
-    drawMarker([mouse_x, mouse_y, stone_color]) {
-        let marker_size = this.stones_radius / 2;
-        let offset = this.stones_radius / 4;
-        this.context.drawImage(STONES.MARKER, mouse_x - offset, mouse_y - offset, marker_size, marker_size);
+    drawMarker([mouse_x, mouse_y], index) {
+        this.context.fillStyle = 'black';
+        this.context.font = `${this.stones_radius / 2}px Arial`;
+        this.context.textAlign = 'center';
+        this.context.textBaseline = 'middle';
+        this.context.fillText(index + 1, mouse_x, mouse_y);
     }
 
     handleMouseDown(event) {
