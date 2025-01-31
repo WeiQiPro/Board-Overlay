@@ -135,11 +135,15 @@ class Canvas {
         this.context.drawImage(stone_color, mouse_x - offset, mouse_y - offset, this.stones_radius, this.stones_radius);
     }
 
-    drawMarker([mouse_x, mouse_y], index) {
-        this.context.fillStyle = 'black';
+    drawMarker([mouse_x, mouse_y, stone_color], index) {
+        // Determine marker color based on the stone's color
+        this.context.fillStyle = (stone_color === STONES.BLACK) ? 'white' : 'black';
+    
         this.context.font = `${this.stones_radius / 2}px Arial`;
         this.context.textAlign = 'center';
         this.context.textBaseline = 'middle';
+        
+        // Draw the marker number
         this.context.fillText(index + 1, mouse_x, mouse_y);
     }
 
