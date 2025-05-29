@@ -13,7 +13,7 @@ const CONST = {
     ABSOLUTE: "absolute",
     ALLOW: "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
     APPEND: {
-        CONTROLS: "?autoplay=1&controls=0&mute=1"
+        CONTROLS: "?autoplay=1&controls=0&noaudio"
     },
     CANVAS: {
         HEIGHT: 1440,
