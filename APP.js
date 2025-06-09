@@ -13,7 +13,7 @@ const CONST = {
     ABSOLUTE: "absolute",
     ALLOW: "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
     APPEND: {
-        CONTROLS: "&autoplay=1&controls=0&noaudio"
+        CONTROLS: "&autoplay=1&controls=0&mute=1&noaudio"
     },
     CANVAS: {
         HEIGHT: 1440,
@@ -343,7 +343,7 @@ class Canvas {
 class Video {
     constructor(source, iframe) {
         this.iframe = document.getElementById(iframe)
-        this.source = vlink + source
+        this.source = vlink + source + CONST.APPEND.CONTROLS;
         this.push_source_to_element()
     }
 
@@ -370,10 +370,17 @@ function main() {
         VIDEO.addEventListener("click", () => {
             new Video(URL.value, "feed");
             document.title = URL.value;
+            console.log("Video Button Clicked");
+            console.log(FEED?.audioContext?.state);
+            console.log(URL.value)
 
 
-            if (FEED.audioContext.state === 'suspended') {
-                audioContext.resume();
+            if (FEED?.audioContext?.state === 'suspended') {
+                FEED.audioContext.resume().then(() => {
+                    console.log("Audio context resumed");
+                }).catch(err => {
+                    console.error("Error resuming audio context:", err);
+                });
             }
         });
 
@@ -383,8 +390,12 @@ function main() {
                 document.title = URL.value;
 
 
-                if (FEED.audioContext.state === 'suspended') {
-                    audioContext.resume();
+                if (FEED?.audioContext?.state === 'suspended') {
+                    FEED.audioContext.resume().then(() => {
+                        console.log("Audio context resumed");
+                    }).catch(err => {
+                        console.error("Error resuming audio context:", err);
+                    });
                 }
             }
         })
