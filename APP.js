@@ -343,7 +343,7 @@ class Canvas {
 class Video {
     constructor(source, iframe) {
         this.iframe = document.getElementById(iframe)
-        this.source = vlink + source
+        this.source = vlink + source + CONST.APPEND.CONTROLS;
         this.push_source_to_element()
     }
 
