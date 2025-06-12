@@ -1,44 +1,168 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Live Board Reviews</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div class="page-container">
-    <div class="hot-bar">
-      <button id="StyleButton">Control: Simple</button>
-      <button id="VideoButton">Add Video</button>
-      <input type="text" id="VideoURL" placeholder="Room Name" style="width: 100px;">
-      <label for="StoneSize">Stone Size:</label>
-      <input type="number" id="StoneSize" value="80" style="width: 50px;">
-      <button id="ResetGrid">Reset Grid</button>
-      <button id="GridElement">Grid: No</button>
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Board Reviews</title>
+    <link rel="stylesheet" href="styles.css">
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    >
+  </head>
+  <body>
+    <div class="page-container">
+      <!-- Minimal Top Bar -->
+      <div class="top-bar">
+        <div class="minimal-controls">
+          <button
+            id="toggleReview"
+            class="icon-btn"
+            title="Toggle Review Tools"
+          >
+            <i class="fas fa-pen"></i>
+          </button>
+          <button id="toggleSettings" class="icon-btn" title="Toggle Settings">
+            <i class="fas fa-cog"></i>
+          </button>
+          <button id="GridElement" class="icon-btn" title="Toggle Grid">
+            <i class="fas fa-border-all"></i>
+          </button>
+        </div>
 
-      <p>⚫:</p>
-      <img src="./img/LMC.png" width="50" height="50" alt="Black Stone">
-      <p>⚪:</p>
-      <img src="./img/RMC.png" width="50" height="50" alt="White Stone">
-      <p>Clear:</p>
-      <img src="./img/SB.png" width="50" height="50"  alt="Clear Stones">
-      <!-- Add your infographic or any additional information related to usage here -->
-    </div>
-    
-    <div class="content-area">
-      <div class="main-feed">
-        <iframe id="feed" class="largeIframe" allow="autoplay"></iframe>
-        <canvas id="overlay" class="largeCanvas"></canvas>
+        <!-- Review Tools Panel -->
+        <div id="reviewPanel" class="tool-panel hidden">
+          <div class="tool-group">
+            <button
+              id="BlackStoneBtn"
+              class="tool-btn"
+              title="Place Black Stone"
+            >
+              ⚫
+            </button>
+            <button
+              id="WhiteStoneBtn"
+              class="tool-btn"
+              title="Place White Stone"
+            >
+              ⚪
+            </button>
+            <button id="PenBtn" class="tool-btn" title="Free Draw">✏️</button>
+            <button id="EraserBtn" class="tool-btn" title="Erase">🧹</button>
+            <button id="TriangleBtn" class="tool-btn" title="Triangle Mark">
+              △
+            </button>
+            <button id="CircleBtn" class="tool-btn" title="Circle Mark">
+              ○
+            </button>
+            <button id="SquareBtn" class="tool-btn" title="Square Mark">
+              □
+            </button>
+            <select id="letterSelect" class="tool-select" title="Select Letter">
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+              <option value="D">D</option>
+              <option value="E">E</option>
+              <option value="F">F</option>
+              <option value="G">G</option>
+              <option value="H">H</option>
+              <option value="I">I</option>
+              <option value="J">J</option>
+            </select>
+            <button id="LetterBtn" class="tool-btn" title="Place Letter">
+              🔤
+            </button>
+            <input
+              type="color"
+              id="markupColor"
+              value="#ffffff"
+              title="Markup/Letter Color"
+              style="width: 32px; height: 32px; border: none; background: none; margin-left: 8px; vertical-align: middle"
+            >
+          </div>
+        </div>
+
+        <!-- Settings Panel -->
+        <div id="settingsPanel" class="tool-panel hidden">
+          <div class="settings-group">
+            <div class="setting-item">
+              <label for="VideoURL" title="Room Name for VDO Ninja"
+              >Room:</label>
+              <input type="text" id="VideoURL" placeholder="Room Name">
+              <button id="VideoButton" title="Connect to Room">Connect</button>
+            </div>
+            <div class="setting-item">
+              <label for="StoneSize" title="Adjust Stone Size"
+              >Stone Size:</label>
+              <input type="number" id="StoneSize" value="80" min="20" max="200">
+            </div>
+            <div class="setting-item">
+              <button id="ResetGrid" title="Reset Grid Position">
+                Reset Grid
+              </button>
+            </div>
+            <div class="setting-item">
+              <label for="twitchId" title="Twitch Channel ID">Twitch:</label>
+              <input type="text" id="twitchId" placeholder="Channel ID">
+              <button id="setTwitchBtn" title="Set Twitch Chat">Set</button>
+            </div>
+            <div class="setting-item">
+              <label for="youtubeId" title="YouTube Video/Stream ID"
+              >YouTube:</label>
+              <input type="text" id="youtubeId" placeholder="Video ID">
+              <button id="setYoutubeBtn" title="Set YouTube Chat">Set</button>
+            </div>
+
+            <div class="setting-item">
+              <label for="ObsVdoUrl" title="OBS VDO Ninja Link"
+              >OBS VDO Ninja:</label>
+              <input
+                type="text"
+                id="ObsVdoUrl"
+                placeholder="Paste OBS VDO Ninja link here"
+              >
+              <button id="ObsVdoButton" title="Connect OBS VDO Ninja">
+                Connect
+              </button>
+            </div>
+
+            <div class="setting-item">
+              <button id="copyShareUrl" title="Copy Shareable URL">
+                Copy Share URL
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
-  </div>
 
-  <div class="footer">
-    <p> Copyright © TangJieHao 2023. All Rights Reserved. This website was designed and developed by TangJieHao. </p>
-  </div>
+      <div class="content-area">
+        <div class="main-feed">
+          <iframe id="feed" class="largeIframe" allow="autoplay"></iframe>
+          <canvas id="overlay" class="largeCanvas"></canvas>
+          <canvas id="drawingLayer" class="largeCanvas"></canvas>
+        </div>
+        <div class="SidePanel">
+          <div class="OBS_Controls" style="align-items: center; justify-content: center;">
+            <iframe id="obs" class="smallIframe" allow="camera; microphone; display-capture; autoplay"></iframe>
+          </div>
+          <div class="Chat">
+            <div
+              id="twitch-chat-panel"
+              style="width: 100%; height: 100%; overflow-y: auto; background: #18181b; color: #fff; padding: 10px; font-family: sans-serif"
+            >
+              <!-- Chat messages will appear here -->
+            </div>
+          </div>
+        </div>
+      </div>
 
-  <!-- <script text="html" src="./APP.js"></script> -->
-  <script text="html" src="./APP.js"></script>
-</body>
+      <div class="footer">
+        <p>This website was designed and developed by TangJieHao.</p>
+      </div>
+
+      <script text="html" src="./APP.js"></script>
+    </div>
+  </body>
 </html>
