@@ -11,7 +11,7 @@ const GRIDSIZE = 2;
 const CONST = {
     ABSOLUTE: "absolute",
     ALLOW:
-        "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; camera; microphone",
+        "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; camera; microphone; display-capture",
     CANVAS: {
         HEIGHT: 1080,
         WIDTH: 1920,
@@ -288,6 +288,7 @@ class Canvas {
     }
 
     updateGridButtonState() {
+        if (!this.gridElement) return; // Ensure gridElement is not null
         // Use SVG icons for grid on/off
         const gridOnIcon = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="16" height="16" rx="2" stroke="white" stroke-width="2"/><path d="M2 7H18" stroke="white" stroke-width="2"/><path d="M2 13H18" stroke="white" stroke-width="2"/><path d="M7 2V18" stroke="white" stroke-width="2"/><path d="M13 2V18" stroke="white" stroke-width="2"/></svg>`;
         const gridOffIcon = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="16" height="16" rx="2" stroke="#666" stroke-width="2"/><path d="M2 7H18" stroke="#666" stroke-width="2"/><path d="M2 13H18" stroke="#666" stroke-width="2"/><path d="M7 2V18" stroke="#666" stroke-width="2"/><path d="M13 2V18" stroke="#666" stroke-width="2"/></svg>`;
@@ -298,7 +299,7 @@ class Canvas {
             this.gridElement.classList.remove('active');
             this.gridElement.innerHTML = gridOffIcon;
         }
-            this.gridElement.dataset.show = this.show.toString();
+        this.gridElement.dataset.show = this.show.toString();
     }
 
     tick() {
@@ -472,7 +473,7 @@ class Canvas {
 
         if (this.points.length < 4) {
             console.log(cx, cy);
-            this.points.push([cx, cy]);
+            this.points.push([Number(cx.toFixed(0)), Number(cy.toFixed(0))]);
             if (this.points.length === 4) {
                 this.grid = this.generateGrid(this.points);
                 this.isGridSet = true;
@@ -538,6 +539,10 @@ class Canvas {
     handleKeyDown(event) {
         if (event.code === "Space") {
             this.clearStones();
+            event.preventDefault();
+        }
+        if (event.code === "KeyR") {
+            this.resetGrid();
             event.preventDefault();
         }
     }
@@ -620,11 +625,15 @@ class Canvas {
                 const xFraction = j / 18; // Horizontal interpolation fraction
                 const yFraction = i / 18; // Vertical interpolation fraction
 
-                grid[i][j] = bilinearInterpolation(
+                let [x, y] = bilinearInterpolation(
                     xFraction,
                     yFraction,
                     points,
                 );
+                // Floor the coordinates to integers
+                x = Math.floor(x);
+                y = Math.floor(y);
+                grid[i][j] = [x, y];
             }
         }
 
@@ -653,6 +662,16 @@ class Canvas {
         });
         return closestPoint;
     }
+
+    resetGrid() {
+        this.isGridSet = false;
+        this.grid = [];
+        this.points = [];
+        this.stones = [];
+        this.boardStones = [];
+        this.updateGridButtonState();
+        updateShareableUrl();
+    }
 }
 
 class IframeManager {
@@ -668,7 +687,6 @@ class IframeManager {
 
     parseUrlParams() {
         const params = new URLSearchParams(window.location.search);
-        
         // Handle VDO.Ninja view link
         if (params.has('vdo_link')) {
             const vdoLink = params.get('vdo_link');
@@ -677,21 +695,18 @@ class IframeManager {
                 document.title = vdoLink;
             }
         }
-
-        // Handle chat parameters
-        if (params.has('chat_platform') && params.has('chat_id')) {
-            const platform = params.get('chat_platform');
-            const channelId = params.get('chat_id');
-            this.setChatUrl(platform, channelId);
+        // Handle chat URL
+        if (params.has('chat_url')) {
+            const chatUrl = decodeURIComponent(params.get('chat_url'));
+            document.getElementById('ChatUrl').value = chatUrl;
+            this.setUrl('chat', chatUrl);
         }
-
         // Handle commentator view
         if (params.has('commentator') && params.get('commentator') === 'true') {
             if (params.has('room')) {
                 this.setCommentatorUrl(params.get('room'));
             }
         }
-
         // Handle VDO Ninja link
         const vdoLink = params.get('vdo');
         if (vdoLink) {
@@ -710,23 +725,9 @@ class IframeManager {
         this.setUrl(element, url);
     }
 
-    setUrl(element, url) {
-        if (!this.iframes[element]) {
-            console.error(`Invalid iframe element: ${element}`);
-            return;
-        }
-
-        this.iframes[element].src = url;
-        this.iframes[element].allow = CONST.ALLOW;
-        this.iframes[element].muted = CONST.TRUE;
-        this.iframes[element].frameborder = CONST.ZERO;
-        this.iframes[element].allowfullscreen = CONST.TRUE;
-        this.iframes[element].style.border = CONST.NONE;
-        this.iframes[element].style.boxShadow = "10px 10px 10px 10px rgba(0, 0, 0, 0.6)";
-
-        const vdoLinkElement = document.getElementById("vdo_link");
-        if (element === 'feed' && vdoLinkElement) {
-            vdoLinkElement.innerText = url;
+    setUrl(type, url) {
+        if (this.iframes[type]) {
+            this.iframes[type].src = url;
         }
     }
 
@@ -766,47 +767,16 @@ class IframeManager {
         });
     }
 
-    setChatUrl(platform, channelId) {
-        if (!channelId) {
-            document.querySelector('.SidePanel').style.display = 'none';
-            return;
-        }
-        
-        let url;
-        console.log("setChatUrl called with platform:", platform, "and channelId:", channelId);
-        
-        switch (platform.toLowerCase()) {
-            case 'twitch':
-                startTwitchChat(channelId);
-                break;
-            case 'youtube':
-                url = `https://www.youtube.com/live_chat?v=${channelId}&embed_domain=${window.location.hostname}`;
-                this.setUrl('chat', url);
-                document.querySelector('.SidePanel').style.display = 'flex';
-                break;
-            default:
-                console.error(`Unsupported chat platform: ${platform}`);
-                return;
-        }
-    }
-
-    generateShareableUrl(roomId, chatPlatform = null, chatId = null, isCommentator = false) {
+    generateShareableUrl() {
         const params = new URLSearchParams();
-        console.log("generateShareableUrl called with roomId:", roomId, "chatPlatform:", chatPlatform, "chatId:", chatId, "isCommentator:", isCommentator);
-        if (roomId) {
-            if (isCommentator) {
-                params.append('commentator', 'true');
-                params.append('room', roomId);
-            } else {
-                params.append('vdo_link', `${this.vdoNinjaBase}view=${roomId}${CONST.APPEND.CONTROLS}`);
-            }
+        const vdoLink = document.getElementById('VideoURL').value;
+        if (vdoLink) params.append('vdo_link', encodeURIComponent(vdoLink));
+        const chatUrl = document.getElementById('ChatUrl').value;
+        if (chatUrl) params.append('chat_url', encodeURIComponent(chatUrl));
+        // ... add other params as needed ...
+        if (overlay && overlay.points && overlay.points.length === 4) {
+            params.set('grid', overlay.points.map(pt => pt.map(Number).map(n => Math.round(n)).join(',')).join(';'));
         }
-        
-        if (chatPlatform && chatId) {
-            params.append('chat_platform', chatPlatform);
-            params.append('chat_id', chatId);
-        }
-        
         return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
     }
 }
@@ -875,12 +845,7 @@ class ConfigManager {
     }
 
     updateShareUrl() {
-        const url = this.iframeManager.generateShareableUrl(
-            document.getElementById('VideoURL').value,
-            this.chatPlatform.value,
-            this.chatChannelId.value,
-            !!this.commentatorRoom.value
-        );
+        const url = this.iframeManager.generateShareableUrl();
         this.shareUrl.value = url;
     }
 }
@@ -894,24 +859,22 @@ class UIManager {
         this.toggleSettings = document.getElementById('toggleSettings');
         this.gridElement = document.getElementById('GridElement');
         
-        // Chat inputs
-        this.twitchId = document.getElementById('twitchId');
-        this.youtubeId = document.getElementById('youtubeId');
-        this.setTwitchBtn = document.getElementById('setTwitchBtn');
-        this.setYoutubeBtn = document.getElementById('setYoutubeBtn');
-        
         this.bindEventListeners();
     }
 
     bindEventListeners() {
         // Toggle panels
-        this.toggleReview.addEventListener('click', () => {
-            this.togglePanel('review');
-        });
+        if (this.toggleReview) {
+            this.toggleReview.addEventListener('click', () => {
+                this.togglePanel('review');
+            });
+        }
 
-        this.toggleSettings.addEventListener('click', () => {
-            this.togglePanel('settings');
-        });
+        if (this.toggleSettings) {
+            this.toggleSettings.addEventListener('click', () => {
+                this.togglePanel('settings');
+            });
+        }
 
         // Grid toggle
         const gridBtn = document.getElementById('GridElement');
@@ -921,19 +884,6 @@ class UIManager {
                 overlay.updateGridButtonState();
             });
         }
-
-        // Chat settings
-        this.setTwitchBtn.addEventListener('click', () => {
-            if (this.twitchId.value) {
-                this.iframeManager.setChatUrl('twitch', this.twitchId.value);
-            }
-        });
-
-        this.setYoutubeBtn.addEventListener('click', () => {
-            if (this.youtubeId.value) {
-                this.iframeManager.setChatUrl('youtube', this.youtubeId.value);
-            }
-        });
 
         // Video connection
         const videoBtn = document.getElementById('VideoButton');
@@ -948,11 +898,14 @@ class UIManager {
         }
 
         // Stone size
-        document.getElementById('StoneSize').addEventListener('change', (e) => {
-            if (overlay) {
-                overlay.stones_radius = e.target.value;
-            }
-        });
+        const stoneSizeInput = document.getElementById('StoneSize');
+        if (stoneSizeInput) {
+            stoneSizeInput.addEventListener('change', (e) => {
+                if (overlay) {
+                    overlay.stones_radius = e.target.value;
+                }
+            });
+        }
 
         // Reset grid
         this.resetBtn = document.getElementById('ResetGrid');
@@ -964,11 +917,12 @@ class UIManager {
                 overlay.stones = [];
                 overlay.boardStones = [];
                 overlay.updateGridButtonState();
+                updateShareableUrl();
             });
         }
 
         // Update shareable URL on input changes
-        ['VideoURL', 'twitchId', 'youtubeId', 'StoneSize'].forEach(id => {
+        ['VideoURL', 'StoneSize'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('input', updateShareableUrl);
         });
@@ -1038,72 +992,15 @@ function main() {
     };
 }
 
-// Helper to get channel from URL (?ttv=channelname)
-function getTwitchChannelFromURL() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get('ttv');
-}
-
-let twitchClient = null;
-
-// Track the current connected channel and WebSocket globally
-let currentTwitchChannel = null;
-let currentTwitchWs = null;
-
-function connectTwitchChat(channel) {
-  if (typeof tmi === 'undefined') {
-    console.error('tmi.js is not loaded! Twitch chat will not work.');
-    return;
-  }
-  if (twitchClient) {
-    twitchClient.disconnect();
-  }
-  twitchClient = new tmi.Client({
-    channels: [channel]
-  });
-  twitchClient.connect();
-
-  const chatMessages = document.getElementById('twitch-chat-messages');
-  chatMessages.innerHTML = '';
-
-  twitchClient.on('message', (channel, tags, message, self) => {
-    const msgDiv = document.createElement('div');
-    msgDiv.innerHTML = `<span style="color:#a970ff;font-weight:bold;">${tags['display-name'] || tags.username}:</span> <span>${message}</span>`;
-    chatMessages.appendChild(msgDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-  });
-}
-
-// On page load, connect if ttv param is present
-const urlChannel = getTwitchChannelFromURL();
-if (urlChannel && urlChannel.trim() !== '') {
-  document.getElementById('twitchId').value = urlChannel;
-  startTwitchChat(urlChannel);
-}
-
-// Allow user to join a channel via input
-document.getElementById('setTwitchBtn').addEventListener('click', () => {
-  const channel = document.getElementById('twitchId').value.trim();
-  if (channel) {
-    startTwitchChat(channel);
-  }
-});
-
 function updateShareableUrl() {
     const params = new URLSearchParams();
 
-    // All params except vdo/obs
-    const ttv = document.getElementById('twitchId').value;
-    if (ttv) params.set('ttv', ttv);
-
-    const ytb = document.getElementById('youtubeId').value;
-    if (ytb) params.set('ytb', ytb);
-
-    const stoneSize = document.getElementById('StoneSize').value;
-    if (stoneSize) params.set('stone', stoneSize);
+    // Only chat_url param for chat
+    const chatUrl = document.getElementById('ChatUrl').value;
+    if (chatUrl) params.set('chat_url', encodeURIComponent(chatUrl));
 
     if (overlay && overlay.points && overlay.points.length === 4) {
-        params.set('grid', overlay.points.map(pt => pt.join(',')).join(';'));
+        params.set('grid', overlay.points.map(pt => pt.map(Number).map(n => Math.round(n)).join(',')).join(';'));
     }
 
     // Add vdo param last
@@ -1146,13 +1043,13 @@ function loadConfigFromUrl() {
         document.getElementById('obs').src = decodedObsLink;
     }
 
-    // Twitch
-    const ttv = params.get('ttv');
-    if (ttv) document.getElementById('twitchId').value = ttv;
-
-    // YouTube
-    const ytb = params.get('ytb');
-    if (ytb) document.getElementById('youtubeId').value = ytb;
+    // Chat URL
+    const chatUrl = params.get('chat_url');
+    if (chatUrl) {
+        const decodedChatUrl = decodeURIComponent(chatUrl);
+        document.getElementById('ChatUrl').value = decodedChatUrl;
+        document.getElementById('chat').src = decodedChatUrl;
+    }
 
     // Stone size
     const stoneSize = params.get('stone');
@@ -1184,169 +1081,40 @@ function loadConfigFromUrl() {
 
 window.addEventListener('DOMContentLoaded', () => {
     // Attach updateShareableUrl to relevant inputs
-    ['VideoURL', 'twitchId', 'youtubeId', 'StoneSize'].forEach(id => {
+    ['VideoURL', 'ChatUrl', 'StoneSize'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', updateShareableUrl);
     });
-    // Copy to clipboard
-    const copyBtn = document.getElementById('copyShareUrl');
-    if (copyBtn) {
-        copyBtn.addEventListener('click', () => {
-            navigator.clipboard.writeText(window.location.href);
-            alert('Shareable URL copied!');
+    // Chat URL input updates chat iframe
+    const chatInput = document.getElementById('ChatUrl');
+    if (chatInput) {
+        chatInput.addEventListener('input', (e) => {
+            document.getElementById('chat').src = e.target.value;
         });
     }
-    // Video connect button: set feed src directly from input
-    const videoBtn = document.getElementById('VideoButton');
-    if (videoBtn) {
-        videoBtn.addEventListener('click', () => {
-            const vdoLink = document.getElementById('VideoURL').value.trim();
-            if (vdoLink) {
-                document.getElementById('feed').src = vdoLink;
-                updateShareableUrl();
-            }
+    // Video URL input updates feed iframe
+    const videoInput = document.getElementById('VideoURL');
+    if (videoInput) {
+        videoInput.addEventListener('input', (e) => {
+            document.getElementById('feed').src = e.target.value;
         });
     }
-    // Start Twitch chat
-    autoStartTwitchChat();
-    // Add event listener for ObsVdoButton
-    const obsBtn = document.getElementById('ObsVdoButton');
-    if (obsBtn) {
-        obsBtn.addEventListener('click', () => {
-            const obsLink = document.getElementById('ObsVdoUrl').value.trim();
-            if (obsLink) {
-                document.getElementById('obs').src = obsLink;
-                updateShareableUrl();
-            }
+    // OBS URL input updates OBS iframe
+    const obsInput = document.getElementById('ObsVdoUrl');
+    if (obsInput) {
+        obsInput.addEventListener('input', (e) => {
+            document.getElementById('obs').src = e.target.value;
         });
     }
+    // Keybindings
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 's') {
+            overlay.show = !overlay.show;
+            overlay.updateGridButtonState();
+        } else if (e.key === 'r') {
+            overlay.resetGrid();
+        }
+    });
 });
 
 main();
-
-function startTwitchChat(channel) {
-    if (!channel) return;
-    // Prevent double connection to the same channel
-    if (currentTwitchChannel === channel && currentTwitchWs) return;
-    currentTwitchChannel = channel;
-    
-    // Clear existing chat
-    const chatContainer = document.getElementById('twitch-chat-panel');
-    chatContainer.innerHTML = '';
-    
-    // Close previous WebSocket if open
-    if (currentTwitchWs) {
-        try { currentTwitchWs.close(); } catch (e) {}
-        currentTwitchWs = null;
-    }
-    
-    let ws = null;
-    const stoneColors = ['black', 'white', 'red', 'blue', 'green', 'yellow', 'purple'];
-    const userStones = new Map();
-    
-    // Show side panel when chat is active
-    document.querySelector('.SidePanel').style.display = 'flex';
-
-    function connect() {
-        try {
-            ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
-            currentTwitchWs = ws;
-            ws.onopen = () => {
-                ws.send('PASS SCHMOOPIIE');
-                ws.send('NICK justinfan12345');
-                ws.send(`JOIN #${channel}`);
-            };
-            ws.onmessage = (event) => handleMessage(event.data);
-            ws.onclose = () => {
-                addMessage('System', 'Disconnected from chat. Attempting to reconnect...', 'error');
-                setTimeout(connect, 5000);
-            };
-            ws.onerror = (error) => {
-                addMessage('System', 'Connection error. Retrying...', 'error');
-            };
-        } catch (error) {
-            addMessage('System', 'Failed to connect to Twitch chat. Retrying...', 'error');
-            setTimeout(connect, 5000);
-        }
-    }
-
-    function handleMessage(rawMessage) {
-        const lines = rawMessage.split('\r\n');
-        for (const line of lines) {
-            if (!line) continue;
-            if (line.startsWith('PING')) {
-                ws.send('PONG :tmi.twitch.tv');
-                continue;
-            }
-            if (line.includes('Welcome, GLHF!')) {
-                addMessage('System', `Connected to ${channel}'s chat!`);
-                continue;
-            }
-            const privmsgMatch = line.match(/:(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG #\w+ :(.+)/);
-            if (privmsgMatch) {
-                const [, username, message] = privmsgMatch;
-                addMessage(username, message);
-            }
-        }
-    }
-
-    function addMessage(username, message, type = 'normal') {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'message';
-        if (type === 'error') {
-            messageDiv.style.borderLeftColor = '#ff6b6b';
-        }
-        let stoneColor = 'black';
-        if (username !== 'System') {
-            if (!userStones.has(username)) {
-                stoneColor = stoneColors[Math.floor(Math.random() * stoneColors.length)];
-                userStones.set(username, stoneColor);
-            } else {
-                stoneColor = userStones.get(username);
-            }
-        }
-        const stoneDiv = document.createElement('div');
-        stoneDiv.className = `go-stone ${stoneColor}`;
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'message-content';
-        const usernameSpan = document.createElement('span');
-        usernameSpan.className = 'username';
-        usernameSpan.textContent = username + ':';
-        const messageSpan = document.createElement('span');
-        messageSpan.className = type === 'error' ? 'message-text error' : 'message-text';
-        messageSpan.textContent = message;
-        const timestampSpan = document.createElement('span');
-        timestampSpan.className = 'timestamp';
-        timestampSpan.textContent = new Date().toLocaleTimeString();
-        contentDiv.appendChild(usernameSpan);
-        contentDiv.appendChild(messageSpan);
-        contentDiv.appendChild(timestampSpan);
-        messageDiv.appendChild(stoneDiv);
-        messageDiv.appendChild(contentDiv);
-        chatContainer.appendChild(messageDiv);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-        const messages = chatContainer.querySelectorAll('.message');
-        if (messages.length > 100) {
-            messages[0].remove();
-        }
-    }
-
-    connect();
-}
-
-// Start chat with channel from input or URL param
-function autoStartTwitchChat() {
-    let channel = getTwitchChannelFromURL();
-    if (!channel) {
-        const input = document.getElementById('twitchId');
-        if (input && input.value) {
-            channel = input.value;
-        }
-    }
-    if (channel) {
-        startTwitchChat(channel);
-    } else {
-        // Hide side panel if no chat is active
-        document.querySelector('.SidePanel').style.display = 'none';
-    }
-}

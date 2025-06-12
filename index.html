@@ -26,9 +26,6 @@
           <button id="toggleSettings" class="icon-btn" title="Toggle Settings">
             <i class="fas fa-cog"></i>
           </button>
-          <button id="GridElement" class="icon-btn" title="Toggle Grid">
-            <i class="fas fa-border-all"></i>
-          </button>
         </div>
 
         <!-- Review Tools Panel -->
@@ -91,7 +88,6 @@
               <label for="VideoURL" title="Room Name for VDO Ninja"
               >Room:</label>
               <input type="text" id="VideoURL" placeholder="Room Name">
-              <button id="VideoButton" title="Connect to Room">Connect</button>
             </div>
             <div class="setting-item">
               <label for="StoneSize" title="Adjust Stone Size"
@@ -99,33 +95,17 @@
               <input type="number" id="StoneSize" value="80" min="20" max="200">
             </div>
             <div class="setting-item">
-              <button id="ResetGrid" title="Reset Grid Position">
-                Reset Grid
-              </button>
+              <label for="ChatUrl" title="Custom Chat URL">Chat URL:</label>
+              <input type="text" id="ChatUrl" placeholder="Paste chat embed URL here">
             </div>
-            <div class="setting-item">
-              <label for="twitchId" title="Twitch Channel ID">Twitch:</label>
-              <input type="text" id="twitchId" placeholder="Channel ID">
-              <button id="setTwitchBtn" title="Set Twitch Chat">Set</button>
-            </div>
-            <div class="setting-item">
-              <label for="youtubeId" title="YouTube Video/Stream ID"
-              >YouTube:</label>
-              <input type="text" id="youtubeId" placeholder="Video ID">
-              <button id="setYoutubeBtn" title="Set YouTube Chat">Set</button>
-            </div>
-
             <div class="setting-item">
               <label for="ObsVdoUrl" title="OBS VDO Ninja Link"
-              >OBS VDO Ninja:</label>
+              >OBS Controller:</label>
               <input
                 type="text"
                 id="ObsVdoUrl"
                 placeholder="Paste OBS VDO Ninja link here"
               >
-              <button id="ObsVdoButton" title="Connect OBS VDO Ninja">
-                Connect
-              </button>
             </div>
 
             <div class="setting-item">
@@ -148,12 +128,7 @@
             <iframe id="obs" class="smallIframe" allow="camera; microphone; display-capture; autoplay"></iframe>
           </div>
           <div class="Chat">
-            <div
-              id="twitch-chat-panel"
-              style="width: 100%; height: 100%; overflow-y: auto; background: #18181b; color: #fff; padding: 10px; font-family: sans-serif"
-            >
-              <!-- Chat messages will appear here -->
-            </div>
+            <iframe id="chat" class="smallIframe" allow="autoplay"></iframe>
           </div>
         </div>
       </div>

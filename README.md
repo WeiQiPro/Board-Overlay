@@ -14,6 +14,8 @@ A modern, web-based board review and broadcast overlay tool with integrated vide
   - Twitch and YouTube chat support via input or URL param.
   - Chat panel auto-connects if a channel is provided.
   - Each user gets a colored Go stone icon.
+  - Paste any chat embed URL in the Chat URL field; it will appear in the chat panel.
+  - The chat panel is now a simple iframe for any custom chat system.
 - **OBS/Commentator Panel:**
   - Dedicated OBS iframe in the SidePanel for remote commentator control, camera, and screen sharing.
   - Fixed width and adjustable height for the OBS panel; chat shrinks as needed.
@@ -29,8 +31,7 @@ A modern, web-based board review and broadcast overlay tool with integrated vide
    - Paste your OBS VDO Ninja link in the "OBS VDO Ninja" field and click Connect.
    - This iframe will have access to camera, mic, and screen sharing.
 3. **Enable chat:**
-   - Enter a Twitch or YouTube channel and click Set.
-   - The chat panel will appear in the SidePanel.
+   - Paste any chat embed URL in the "Chat URL" field. The chat will appear in the SidePanel.
 4. **Share your setup:**
    - Click "Copy Share URL" to get a link with all your current settings.
    - Anyone with the link will see the same board, video, OBS, and chat setup.
