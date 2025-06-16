@@ -163,12 +163,15 @@ class DrawingLayer {
             case 'SQUARE':
                 this.drawSquare(x, y);
                 break;
-            case 'LETTER':
+            case 'LETTER': {
+                // Always use white fill and black outline for letters
                 this.context.strokeStyle = 'black';
+                this.context.fillStyle = 'white';
                 this.context.lineWidth = 3;
                 this.context.strokeText(text, x - 8, y + 8);
                 this.context.fillText(text, x - 8, y + 8);
                 break;
+            }
         }
 
         this.context.restore();
@@ -212,6 +215,7 @@ class Canvas {
         this.context = this.canvas.getContext("2d");
         this.gridElement = document.getElementById("GridElement");
         this.show = true;
+        this.showCoordinates = true;
         this.initializeCanvas();
         this.stones = []; // For black and white stones (variations)
         this.boardStones = []; // For board stones (empty positions)
@@ -219,6 +223,8 @@ class Canvas {
         this.points = [];
         this.isGridSet = false;
         this.currentColor = "BLACK";
+        this.LetterToolList = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        this.LetterToolListIndex = 0;
         // All stones should be 100x100
         this.stoneSizes = {
             BLACK: 100,
@@ -280,11 +286,27 @@ class Canvas {
             if (event.code === "Space") {
                 if (window.drawingLayer) {
                     drawingLayer.clearCanvas();
+                    this.boardStones = [];
                 }
                 event.preventDefault();
             }
             this.handleKeyDown(event);
         });
+
+        // Add event listeners for GridBtn and CoordBtn
+        const gridBtn = document.getElementById("GridBtn");
+        if (gridBtn) {
+            gridBtn.addEventListener("click", () => {
+                this.show = !this.show;
+                this.updateGridButtonState();
+            });
+        }
+        const coordBtn = document.getElementById("CoordBtn");
+        if (coordBtn) {
+            coordBtn.addEventListener("click", () => {
+                this.showCoordinates = !this.showCoordinates;
+            });
+        }
     }
 
     updateGridButtonState() {
@@ -320,7 +342,9 @@ class Canvas {
     }
 
     drawGrid() {
-        if (this.grid && this.show) {
+        if (this.grid) {
+            // Draw grid points only if show is true
+            if (this.show) {
             for (let i = 0; i < this.grid.length; i++) {
                 for (let j = 0; j < this.grid[i].length; j++) {
                     const point = this.grid[i][j];
@@ -332,6 +356,37 @@ class Canvas {
                         GRIDSIZE,
                     ); // Adjust size as needed
                 }
+                }
+            }
+
+            // Draw coordinates (top: A-T, left: 1-19) only if showCoordinates is true
+            if (this.showCoordinates) {
+                const colLabels = [
+                    'A','B','C','D','E','F','G','H','J','K','L','M','N','O','P','Q','R','S','T'
+                ]; // Go skips 'I'
+                this.context.save();
+                this.context.font = '24px Arial';
+                this.context.fillStyle = 'white';
+                this.context.textAlign = 'center';
+                this.context.textBaseline = 'middle';
+
+                // Top labels (columns)
+                if (this.grid.length > 0) {
+                    for (let j = 0; j < 19; j++) {
+                        const pt = this.grid[0][j];
+                        // Place label above the first row
+                        this.context.fillText(colLabels[j], pt[0], pt[1] - 32);
+                    }
+                }
+                // Left labels (rows)
+                for (let i = 0; i < 19; i++) {
+                    const pt = this.grid[i][0];
+                    // Place label to the left of the first column
+                    this.context.textAlign = 'right';
+                    this.context.fillText((i+1).toString(), pt[0] - 24, pt[1]);
+                    this.context.textAlign = 'center'; // Reset for columns
+                }
+                this.context.restore();
             }
         }
     }
@@ -485,7 +540,20 @@ class Canvas {
 
             // Handle shape/letter tools
             if (['TRIANGLE', 'CIRCLE', 'SQUARE', 'LETTER'].includes(currentTool)) {
-                const text = currentTool === 'LETTER' ? document.getElementById('letterSelect').value : '';
+                let text = '';
+                if (currentTool === 'LETTER') {
+                    const letterBtn = document.getElementById('LetterBtn');
+                    if (letterBtn) {
+                        let currentLetter = letterBtn.textContent.trim();
+                        // If not a valid A-Z, reset to 'A'
+                        if (!/^[A-Z]$/.test(currentLetter)) currentLetter = 'A';
+                        let nextLetter = currentLetter === 'Z' ? 'A' : String.fromCharCode(currentLetter.charCodeAt(0) + 1);
+                        letterBtn.textContent = nextLetter;
+                        text = currentLetter;
+                    } else {
+                        text = 'A';
+                    }
+                }
                 drawingLayer.addMark(currentTool, point[0], point[1], text);
                 return;
             }
@@ -502,8 +570,8 @@ class Canvas {
                         x === point[0] && y === point[1]
                     );
                     if (existingStoneIndex >= 0) {
-                    this.stones.splice(existingStoneIndex, 1);
-                }
+                        this.stones.splice(existingStoneIndex, 1);
+                    }
                     this.boardStones.push([point[0], point[1], STONES.BOARD]);
                 }
             } else if (event.button === 0) { // Left click - handle variation stones
@@ -512,7 +580,7 @@ class Canvas {
                 );
                 if (existingStoneIndex >= 0) {
                     this.stones.splice(existingStoneIndex, 1);
-            } else {
+                } else {
                     // Remove any board stone at this position
                     let existingBoardStoneIndex = this.boardStones.findIndex(([x, y]) =>
                         x === point[0] && y === point[1]
@@ -539,6 +607,9 @@ class Canvas {
     handleKeyDown(event) {
         if (event.code === "Space") {
             this.clearStones();
+            this.LetterToolListIndex = 0; // Reset letter index to 0 (A) when space is pressed
+            const letterBtn = document.getElementById('LetterBtn');
+            if (letterBtn) letterBtn.textContent = 'A';
             event.preventDefault();
         }
         if (event.code === "KeyR") {
@@ -683,6 +754,7 @@ class IframeManager {
         };
         this.vdoNinjaBase = "https://vdo.ninja/?";
         this.parseUrlParams();
+        updateSidePanelVisibility();
     }
 
     parseUrlParams() {
@@ -728,6 +800,7 @@ class IframeManager {
     setUrl(type, url) {
         if (this.iframes[type]) {
             this.iframes[type].src = url;
+            updateSidePanelVisibility();
         }
     }
 
@@ -989,6 +1062,7 @@ function main() {
         overlay.tick();
     };
     overlayLoop();
+    updateSidePanelVisibility();
     };
 }
 
@@ -1115,6 +1189,25 @@ window.addEventListener('DOMContentLoaded', () => {
             overlay.resetGrid();
         }
     });
+
+    // Initialize LetterBtn with 'A' instead of emoji
+    const letterBtn = document.getElementById('LetterBtn');
+    if (letterBtn) {
+        letterBtn.textContent = 'A';
+    }
 });
+
+function updateSidePanelVisibility() {
+    const obsIframe = document.getElementById('obs');
+    const chatIframe = document.getElementById('chat');
+    const obsControls = document.querySelector('.OBS_Controls');
+    const chatDiv = document.querySelector('.Chat');
+    const sidePanel = document.querySelector('.SidePanel');
+    let obsVisible = !!(obsIframe && obsIframe.src && obsIframe.src.trim());
+    let chatVisible = !!(chatIframe && chatIframe.src && chatIframe.src.trim());
+    if (obsControls) obsControls.style.display = obsVisible ? '' : 'none';
+    if (chatDiv) chatDiv.style.display = chatVisible ? '' : 'none';
+    if (sidePanel) sidePanel.style.display = (obsVisible || chatVisible) ? '' : 'none';
+}
 
 main();
