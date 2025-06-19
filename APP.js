@@ -1164,6 +1164,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (chatInput) {
         chatInput.addEventListener('input', (e) => {
             document.getElementById('chat').src = e.target.value;
+            updateSidePanelVisibility();
         });
     }
     // Video URL input updates feed iframe
@@ -1171,6 +1172,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (videoInput) {
         videoInput.addEventListener('input', (e) => {
             document.getElementById('feed').src = e.target.value;
+            updateSidePanelVisibility();
         });
     }
     // OBS URL input updates OBS iframe
@@ -1178,6 +1180,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (obsInput) {
         obsInput.addEventListener('input', (e) => {
             document.getElementById('obs').src = e.target.value;
+            updateSidePanelVisibility();
         });
     }
     // Keybindings
