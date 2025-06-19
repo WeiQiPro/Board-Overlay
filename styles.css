@@ -20,10 +20,10 @@ body, html {
     justify-content: center;
     align-items: flex-start;
     width: 100%;
-    margin-top: 68px;
+    margin-top: 58px;
     position: relative;
     gap: 4px;
-    height: calc(100vh - 68px);
+    height: calc(100vh - 58px);
     overflow: hidden;
 }
 
@@ -100,7 +100,7 @@ body, html {
     gap: 5px;
     align-items: center;
     flex-shrink: 0;
-    height: 40px; /* Fixed height to fit within top bar */
+    height: 32px; /* Fixed height to fit within top bar */
 }
 
 .letter-selector {
@@ -118,16 +118,16 @@ body, html {
 }
 
 .tool-btn {
-    padding: 8px;
-    font-size: 20px;
+    padding: 4px;
+    font-size: 18px;
     border: 2px solid #444;
     border-radius: 4px;
     background-color: #333;
     color: white;
     cursor: pointer;
     transition: all 0.2s ease;
-    min-width: 40px;
-    min-height: 40px;
+    min-width: 32px;
+    min-height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -220,13 +220,13 @@ body, html {
     left: 0;
     right: 0;
     background-color: rgba(33, 33, 33, 0.95);
-    padding: 10px;
+    padding: 8px 10px;
     z-index: 1000;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     display: flex;
     align-items: center;
     gap: 16px;
-    height: 50px;
+    height: 40px;
     overflow-x: auto;
     overflow-y: visible;
 }
@@ -244,12 +244,12 @@ body, html {
     background: none;
     border: none;
     color: white;
-    font-size: 20px;
-    padding: 8px;
+    font-size: 18px;
+    padding: 4px;
     cursor: pointer;
     border-radius: 4px;
     transition: background-color 0.2s;
-    min-width: 40px;
+    min-width: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -295,7 +295,7 @@ body, html {
     gap: 20px;
     align-items: center;
     flex-shrink: 0;
-    height: 40px; /* Fixed height to fit within top bar */
+    height: 32px; /* Fixed height to fit within top bar */
 }
 
 .setting-item {
@@ -323,7 +323,7 @@ body, html {
 }
 
 .setting-item input[type="number"] {
-    width: 70px;
+    width: 50px;
 }
 
 .setting-item button {
@@ -343,13 +343,13 @@ body, html {
 }
 
 .tool-select {
-    padding: 8px;
-    font-size: 16px;
+    padding: 6px;
+    font-size: 14px;
     border: 2px solid #444;
     border-radius: 4px;
     background-color: #333;
     color: white;
-    height: 40px;
+    height: 32px;
 }
 
 /* Tooltip styles */
@@ -360,7 +360,7 @@ body, html {
 [title]:hover::after {
     content: attr(title);
     position: fixed;
-    top: 60px; /* Position below the top bar (50px height + 10px padding) */
+    top: 50px; /* Position below the top bar (40px height + 10px padding) */
     left: 50%;
     transform: translateX(-50%);
     background-color: rgba(0, 0, 0, 0.95);
@@ -382,7 +382,7 @@ body, html {
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
     border-bottom: 5px solid rgba(0, 0, 0, 0.95); /* Changed to point upward */
-    top: 55px; /* Position arrow just below the top bar */
+    top: 45px; /* Position arrow just below the top bar */
     left: 50%;
     transform: translateX(-50%);
     z-index: 100000;
@@ -540,4 +540,181 @@ html, body {
     width: 100vw;
     height: 100vh;
     position: relative;
+}
+
+.obs-control-group {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-shrink: 0;
+    height: 40px; /* Fixed height to fit within top bar */
+}
+
+.obs-status {
+    display: flex;
+    align-items: center;
+}
+
+.status-indicator {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.status-indicator.connected {
+    background-color: #4caf50;
+    color: white;
+}
+
+.status-indicator.disconnected {
+    background-color: #f44336;
+    color: white;
+}
+
+.status-indicator.connecting {
+    background-color: #ff9800;
+    color: white;
+}
+
+.obs-scenes {
+    display: flex;
+    flex-direction: row;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.scene-controls {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    align-items: center;
+}
+
+.scene-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-width: 300px;
+}
+
+.scene-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background-color: #333;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    min-width: 60px;
+    text-align: center;
+}
+
+.scene-btn:hover {
+    background-color: #444;
+    transform: scale(1.05);
+}
+
+.scene-btn.active {
+    border-color: #4caf50;
+    background-color: #1b5e20;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+    font-weight: bold;
+}
+
+.scene-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.scene-dropdown {
+    display: none;
+    min-width: 120px;
+}
+
+.scene-dropdown.show {
+    display: block;
+}
+
+.scene-dropdown select {
+    padding: 6px 10px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background-color: #333;
+    color: white;
+    min-width: 120px;
+    height: 32px;
+    font-size: 12px;
+}
+
+.scene-dropdown select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.scene-dropdown select option {
+    background-color: #333;
+    color: white;
+}
+
+.scene-dropdown select option:checked {
+    background-color: #1b5e20;
+    color: white;
+    font-weight: bold;
+}
+
+.stream-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.obs-scenes label {
+    font-size: 12px;
+    color: #ccc;
+    margin-right: 8px;
+    white-space: nowrap;
+}
+
+.obs-btn {
+    padding: 6px 12px;
+    background-color: #2196f3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    height: 32px;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+.obs-btn:hover:not(:disabled) {
+    background-color: #1976d2;
+}
+
+.obs-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#obsStartStream {
+    background-color: #4caf50;
+}
+
+#obsStartStream:hover:not(:disabled) {
+    background-color: #45a049;
+}
+
+#obsStopStream {
+    background-color: #f44336;
+}
+
+#obsStopStream:hover:not(:disabled) {
+    background-color: #d32f2f;
 }

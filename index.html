@@ -10,6 +10,7 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
     >
+    <script src="https://cdn.jsdelivr.net/npm/obs-websocket-js@5.0.6/dist/obs-ws.global.min.js"></script>
   </head>
   <body>
     <div class="page-container">
@@ -25,6 +26,9 @@
           </button>
           <button id="toggleSettings" class="icon-btn" title="Toggle Settings">
             <i class="fas fa-cog"></i>
+          </button>
+          <button id="toggleObsControl" class="icon-btn" title="Toggle OBS Controls">
+            <i class="fas fa-video"></i>
           </button>
         </div>
 
@@ -80,7 +84,7 @@
           <div class="settings-group">
             <div class="setting-item">
               <label for="VideoURL" title="Room Name for VDO Ninja"
-              >Room:</label>
+              >Real Board:</label>
               <input type="text" id="VideoURL" placeholder="Room Name">
             </div>
             <div class="setting-item">
@@ -94,18 +98,51 @@
             </div>
             <div class="setting-item">
               <label for="ObsVdoUrl" title="OBS VDO Ninja Link"
-              >OBS Controller:</label>
+              >OBS Camera:</label>
               <input
                 type="text"
                 id="ObsVdoUrl"
                 placeholder="Paste OBS VDO Ninja link here"
               >
             </div>
-
+            <div class="setting-item">
+              <label for="ObsWebSocket" title="OBS WebSocket Connection"
+              >OBS WebSocket:</label>
+              <input
+                type="text"
+                id="ObsWebSocket"
+                placeholder="ws://localhost:4455&scenes=[]&pass=password"
+              >
+            </div>
             <div class="setting-item">
               <button id="copyShareUrl" title="Copy Shareable URL">
                 Copy Share URL
               </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- OBS Control Panel -->
+        <div id="obsControlPanel" class="tool-panel hidden">
+          <div class="obs-control-group">
+            <div class="obs-status">
+              <span id="obsConnectionStatus" class="status-indicator disconnected">Disconnected</span>
+            </div>
+            <div class="obs-scenes">
+              <div class="scene-controls">
+                <div id="obsSceneButtons" class="scene-buttons">
+                  <!-- Scene buttons will be dynamically added here -->
+                </div>
+                <div id="obsSceneDropdown" class="scene-dropdown" style="display: none;">
+                  <label for="obsSceneSelect">Scene:</label>
+                  <select id="obsSceneSelect" disabled>
+                    <option value="">No scenes available</option>
+                  </select>
+                </div>
+              </div>
+              <div class="stream-controls">
+                <button id="obsStreamToggle" class="obs-btn" disabled>Start Stream</button>
+              </div>
             </div>
           </div>
         </div>

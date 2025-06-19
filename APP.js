@@ -1,3 +1,31 @@
+// Simple debugger class
+class Debugger {
+    constructor() {
+        this.enabled = false; // Default off
+    }
+    
+    log(...args) {
+        if (this.enabled) {
+            debug.log(...args);
+        }
+    }
+    
+    error(...args) {
+        if (this.enabled) {
+            debug.error(...args);
+        }
+    }
+    
+    warn(...args) {
+        if (this.enabled) {
+            debug.warn(...args);
+        }
+    }
+}
+
+// Global debugger instance
+const debug = new Debugger();
+
 const FEED = document.getElementById("feed");
 const CANVAS = document.getElementById("overlay");
 const CONTEXT = CANVAS.getContext("2d");
@@ -52,6 +80,10 @@ class DrawingLayer {
     initializeCanvas() {
         this.canvas.width = CONST.CANVAS.WIDTH;
         this.canvas.height = CONST.CANVAS.HEIGHT;
+        
+        // Make canvas focusable for keyboard shortcuts
+        this.canvas.tabIndex = 0;
+        this.canvas.style.outline = 'none'; // Remove focus outline
         this.context.strokeStyle = this.getPenColor();
         this.context.lineWidth = 2;
         this.context.font = '24px Arial';
@@ -67,6 +99,12 @@ class DrawingLayer {
         this.canvas.addEventListener('mousemove', this.draw.bind(this));
         this.canvas.addEventListener('mouseup', this.stopDrawing.bind(this));
         this.canvas.addEventListener('mouseout', this.stopDrawing.bind(this));
+        
+        // Ensure canvas gets focus when clicked for keyboard shortcuts
+        this.canvas.addEventListener('click', () => {
+            this.canvas.focus();
+        });
+        
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Delete') {
                 this.clearCanvas();
@@ -225,6 +263,20 @@ class Canvas {
         this.currentColor = "BLACK";
         this.LetterToolList = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         this.LetterToolListIndex = 0;
+        
+        // Initialize letter stack from A to ZZ in alphabetical order
+        this.letterStack = [];
+        // Single letters A-Z
+        for (let i = 65; i <= 90; i++) {
+            this.letterStack.push(String.fromCharCode(i));
+        }
+        // Double letters AA-ZZ
+        for (let i = 65; i <= 90; i++) {
+            for (let j = 65; j <= 90; j++) {
+                this.letterStack.push(String.fromCharCode(i) + String.fromCharCode(j));
+            }
+        }
+        
         // All stones should be 100x100
         this.stoneSizes = {
             BLACK: 100,
@@ -271,6 +323,10 @@ class Canvas {
     initializeCanvas() {
         this.canvas.width = CONST.CANVAS.WIDTH;
         this.canvas.height = CONST.CANVAS.HEIGHT;
+        
+        // Make canvas focusable for keyboard shortcuts
+        this.canvas.tabIndex = 0;
+        this.canvas.style.outline = 'none'; // Remove focus outline
     }
 
     bindEventListeners() {
@@ -282,7 +338,30 @@ class Canvas {
             "contextmenu",
             this.handleContextMenu.bind(this),
         );
+        
+        // Ensure canvas gets focus when clicked for keyboard shortcuts
+        this.canvas.addEventListener('click', () => {
+            this.canvas.focus();
+        });
+        
         document.addEventListener("keydown", (event) => {
+            // Don't trigger shortcuts if user is typing in any input field
+            const activeElement = document.activeElement;
+            const isInputField = activeElement && (
+                activeElement.tagName === 'INPUT' || 
+                activeElement.tagName === 'TEXTAREA' || 
+                activeElement.tagName === 'SELECT' ||
+                activeElement.contentEditable === 'true' ||
+                activeElement.contentEditable === 'plaintext-only' ||
+                activeElement.role === 'textbox' ||
+                activeElement.role === 'searchbox' ||
+                activeElement.role === 'combobox'
+            );
+            
+            if (isInputField) {
+                return; // Don't trigger shortcuts when typing in inputs
+            }
+            
             if (event.code === "Space") {
                 if (window.drawingLayer) {
                     drawingLayer.clearCanvas();
@@ -342,25 +421,27 @@ class Canvas {
     }
 
     drawGrid() {
-        if (this.grid) {
+        if (this.grid && this.grid.length > 0) {
             // Draw grid points only if show is true
             if (this.show) {
-            for (let i = 0; i < this.grid.length; i++) {
-                for (let j = 0; j < this.grid[i].length; j++) {
-                    const point = this.grid[i][j];
-                    this.context.fillStyle = "white"; // Adjust color as needed
-                    this.context.fillRect(
-                        point[0] - GRIDSIZE / 2,
-                        point[1] - GRIDSIZE / 2,
-                        GRIDSIZE,
-                        GRIDSIZE,
-                    ); // Adjust size as needed
-                }
+                for (let i = 0; i < this.grid.length; i++) {
+                    for (let j = 0; j < this.grid[i].length; j++) {
+                        const point = this.grid[i][j];
+                        if (point && point.length >= 2) {
+                            this.context.fillStyle = "white"; // Adjust color as needed
+                            this.context.fillRect(
+                                point[0] - GRIDSIZE / 2,
+                                point[1] - GRIDSIZE / 2,
+                                GRIDSIZE,
+                                GRIDSIZE,
+                            ); // Adjust size as needed
+                        }
+                    }
                 }
             }
 
             // Draw coordinates (top: A-T, left: 1-19) only if showCoordinates is true
-            if (this.showCoordinates) {
+            if (this.showCoordinates && this.grid.length > 0 && this.grid[0].length > 0) {
                 const colLabels = [
                     'A','B','C','D','E','F','G','H','J','K','L','M','N','O','P','Q','R','S','T'
                 ]; // Go skips 'I'
@@ -371,20 +452,22 @@ class Canvas {
                 this.context.textBaseline = 'middle';
 
                 // Top labels (columns)
-                if (this.grid.length > 0) {
-                    for (let j = 0; j < 19; j++) {
-                        const pt = this.grid[0][j];
+                for (let j = 0; j < Math.min(19, this.grid[0].length); j++) {
+                    const pt = this.grid[0][j];
+                    if (pt && pt.length >= 2) {
                         // Place label above the first row
                         this.context.fillText(colLabels[j], pt[0], pt[1] - 32);
                     }
                 }
                 // Left labels (rows)
-                for (let i = 0; i < 19; i++) {
+                for (let i = 0; i < Math.min(19, this.grid.length); i++) {
                     const pt = this.grid[i][0];
-                    // Place label to the left of the first column
-                    this.context.textAlign = 'right';
-                    this.context.fillText((i+1).toString(), pt[0] - 24, pt[1]);
-                    this.context.textAlign = 'center'; // Reset for columns
+                    if (pt && pt.length >= 2) {
+                        // Place label to the left of the first column
+                        this.context.textAlign = 'right';
+                        this.context.fillText((i+1).toString(), pt[0] - 24, pt[1]);
+                        this.context.textAlign = 'center'; // Reset for columns
+                    }
                 }
                 this.context.restore();
             }
@@ -527,7 +610,7 @@ class Canvas {
         let [cx, cy] = this.getCanvasCoords(x, y);
 
         if (this.points.length < 4) {
-            console.log(cx, cy);
+            debug.log(cx, cy);
             this.points.push([Number(cx.toFixed(0)), Number(cy.toFixed(0))]);
             if (this.points.length === 4) {
                 this.grid = this.generateGrid(this.points);
@@ -544,12 +627,43 @@ class Canvas {
                 if (currentTool === 'LETTER') {
                     const letterBtn = document.getElementById('LetterBtn');
                     if (letterBtn) {
-                        let currentLetter = letterBtn.textContent.trim();
-                        // If not a valid A-Z, reset to 'A'
-                        if (!/^[A-Z]$/.test(currentLetter)) currentLetter = 'A';
-                        let nextLetter = currentLetter === 'Z' ? 'A' : String.fromCharCode(currentLetter.charCodeAt(0) + 1);
-                        letterBtn.textContent = nextLetter;
-                        text = currentLetter;
+                        // Check if there's already a letter at this position
+                        const existingLetter = drawingLayer.marks.find(mark => 
+                            mark.type === 'LETTER' && 
+                            Math.sqrt((mark.x - point[0]) ** 2 + (mark.y - point[1]) ** 2) <= 20
+                        );
+                        
+                        if (existingLetter) {
+                            // Remove the existing letter
+                            drawingLayer.marks = drawingLayer.marks.filter(mark => mark !== existingLetter);
+                            drawingLayer.redrawAll();
+                            
+                            // Insert the removed letter back into its proper alphabetical position
+                            const removedLetter = existingLetter.text;
+                            let insertIndex = 0;
+                            
+                            // Find the correct position to maintain alphabetical order
+                            for (let i = 0; i < this.letterStack.length; i++) {
+                                if (this.letterStack[i] > removedLetter) {
+                                    insertIndex = i;
+                                    break;
+                                }
+                                insertIndex = i + 1;
+                            }
+                            
+                            this.letterStack.splice(insertIndex, 0, removedLetter);
+                            letterBtn.textContent = this.letterStack[0];
+                            return;
+                        } else {
+                            // Get the next letter from the stack
+                            if (this.letterStack.length > 0) {
+                                text = this.letterStack.shift(); // Remove and get the first letter
+                                letterBtn.textContent = this.letterStack.length > 0 ? this.letterStack[0] : 'A';
+                            } else {
+                                text = 'A'; // Fallback if stack is empty
+                                letterBtn.textContent = 'A';
+                            }
+                        }
                     } else {
                         text = 'A';
                     }
@@ -607,9 +721,7 @@ class Canvas {
     handleKeyDown(event) {
         if (event.code === "Space") {
             this.clearStones();
-            this.LetterToolListIndex = 0; // Reset letter index to 0 (A) when space is pressed
-            const letterBtn = document.getElementById('LetterBtn');
-            if (letterBtn) letterBtn.textContent = 'A';
+            // Letter stack is already reset in clearStones()
             event.preventDefault();
         }
         if (event.code === "KeyR") {
@@ -621,6 +733,25 @@ class Canvas {
     clearStones() {
         this.stones = [];
         this.clearCanvas();
+        
+        // Reset letter stack
+        this.letterStack = [];
+        // Single letters A-Z
+        for (let i = 65; i <= 90; i++) {
+            this.letterStack.push(String.fromCharCode(i));
+        }
+        // Double letters AA-ZZ
+        for (let i = 65; i <= 90; i++) {
+            for (let j = 65; j <= 90; j++) {
+                this.letterStack.push(String.fromCharCode(i) + String.fromCharCode(j));
+            }
+        }
+        
+        // Update letter button
+        const letterBtn = document.getElementById('LetterBtn');
+        if (letterBtn) {
+            letterBtn.textContent = this.letterStack[0];
+        }
     }
 
     checkForOverlappingStones() {
@@ -850,13 +981,33 @@ class IframeManager {
         if (overlay && overlay.points && overlay.points.length === 4) {
             params.set('grid', overlay.points.map(pt => pt.map(Number).map(n => Math.round(n)).join(',')).join(';'));
         }
+        // Add obs_ws param last
+        const obsWebSocket = document.getElementById('ObsWebSocket').value;
+        if (obsWebSocket) {
+            // Use the original WebSocket URL without modification
+            let formattedUrl = obsWebSocket;
+            
+            // Only add scenes parameter if we're in restricted control mode
+            if (window.obsController && window.obsController.allowedScenes && window.obsController.allowedScenes.length > 0) {
+                // Add scenes parameter for restricted control
+                debug.log('Adding scenes parameter to shareable URL (restricted control):', window.obsController.allowedScenes);
+                formattedUrl += `&scenes=${encodeURIComponent(JSON.stringify(window.obsController.allowedScenes))}`;
+            } else {
+                debug.log('No scenes parameter added to shareable URL (full control mode)');
+            }
+            
+            // Note: We don't include the password in the shareable URL for security
+            // The password should be entered manually by the user
+            
+            params.set('obs_ws', encodeURIComponent(encodeURIComponent(formattedUrl)));
+        }
         return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
     }
 }
 
 class Video {
     constructor(source, iframe, link = false) {
-        console.log("Video Constructor called with source:", source);
+        debug.log("Video Constructor called with source:", source);
         this.iframeManager = new IframeManager();
         if (!link) {
             this.iframeManager.setViewerUrl(source);
@@ -928,8 +1079,10 @@ class UIManager {
         this.iframeManager = iframeManager;
         this.reviewPanel = document.getElementById('reviewPanel');
         this.settingsPanel = document.getElementById('settingsPanel');
+        this.obsControlPanel = document.getElementById('obsControlPanel');
         this.toggleReview = document.getElementById('toggleReview');
         this.toggleSettings = document.getElementById('toggleSettings');
+        this.toggleObsControl = document.getElementById('toggleObsControl');
         this.gridElement = document.getElementById('GridElement');
         
         this.bindEventListeners();
@@ -946,6 +1099,12 @@ class UIManager {
         if (this.toggleSettings) {
             this.toggleSettings.addEventListener('click', () => {
                 this.togglePanel('settings');
+            });
+        }
+
+        if (this.toggleObsControl) {
+            this.toggleObsControl.addEventListener('click', () => {
+                this.togglePanel('obsControl');
             });
         }
 
@@ -995,7 +1154,7 @@ class UIManager {
         }
 
         // Update shareable URL on input changes
-        ['VideoURL', 'StoneSize'].forEach(id => {
+        ['VideoURL', 'StoneSize', 'ObsWebSocket', 'ObsVdoUrl'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('input', updateShareableUrl);
         });
@@ -1011,20 +1170,746 @@ class UIManager {
     }
 
     togglePanel(type) {
-        const isReview = type === 'review';
-        const targetPanel = isReview ? this.reviewPanel : this.settingsPanel;
-        const otherPanel = isReview ? this.settingsPanel : this.reviewPanel;
-        const targetBtn = isReview ? this.toggleReview : this.toggleSettings;
-        const otherBtn = isReview ? this.toggleSettings : this.toggleReview;
+        const panels = {
+            'review': this.reviewPanel,
+            'settings': this.settingsPanel,
+            'obsControl': this.obsControlPanel
+        };
+        const buttons = {
+            'review': this.toggleReview,
+            'settings': this.toggleSettings,
+            'obsControl': this.toggleObsControl
+        };
+
+        const targetPanel = panels[type];
+        const targetBtn = buttons[type];
 
         if (targetPanel.classList.contains('hidden')) {
-            otherPanel.classList.add('hidden');
-            otherBtn.classList.remove('active');
+            // Hide all other panels
+            Object.values(panels).forEach(panel => {
+                if (panel && panel !== targetPanel) {
+                    panel.classList.add('hidden');
+                }
+            });
+            Object.values(buttons).forEach(btn => {
+                if (btn && btn !== targetBtn) {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            // Show target panel
             targetPanel.classList.remove('hidden');
             targetBtn.classList.add('active');
         } else {
+            // Hide target panel
             targetPanel.classList.add('hidden');
             targetBtn.classList.remove('active');
+        }
+    }
+}
+
+class OBSController {
+    constructor() {
+        this.obs = new OBSWebSocket();
+        this.connected = false;
+        this.scenes = [];
+        this.allowedScenes = []; // Scenes allowed from URL parameters
+        this.currentScene = '';
+        this.streaming = false;
+        this.maxSceneButtons = 4; // Maximum number of scene buttons before switching to dropdown
+        
+        this.connectionStatus = document.getElementById('obsConnectionStatus');
+        this.sceneButtonsContainer = document.getElementById('obsSceneButtons');
+        this.sceneDropdownContainer = document.getElementById('obsSceneDropdown');
+        this.sceneSelect = document.getElementById('obsSceneSelect');
+        this.streamToggleBtn = document.getElementById('obsStreamToggle');
+        
+        this.bindEventListeners();
+        this.bindOBSEvents();
+        this.loadConfigFromUrl();
+    }
+
+    bindEventListeners() {
+        // OBS WebSocket input
+        const obsWebSocketInput = document.getElementById('ObsWebSocket');
+        if (obsWebSocketInput) {
+            obsWebSocketInput.addEventListener('input', (e) => {
+                this.parseWebSocketUrl(e.target.value);
+                updateShareableUrl();
+            });
+        }
+
+        // Scene selection
+        if (this.sceneSelect) {
+            this.sceneSelect.addEventListener('change', (e) => {
+                this.switchScene(e.target.value);
+            });
+        }
+
+        // Stream controls
+        if (this.streamToggleBtn) {
+            this.streamToggleBtn.addEventListener('click', () => {
+                this.toggleStream();
+            });
+        }
+    }
+
+    bindOBSEvents() {
+        // Connection events
+        this.obs.on('ConnectionOpened', () => {
+            debug.log('OBS WebSocket connection opened');
+            this.updateStatus('connecting');
+        });
+
+        this.obs.on('ConnectionClosed', (error) => {
+            debug.log('OBS WebSocket connection closed:', error);
+            this.updateStatus('disconnected');
+            this.connected = false;
+            this.stopStreamingStatusRefresh();
+        });
+
+        this.obs.on('ConnectionError', (error) => {
+            debug.error('OBS WebSocket connection error:', error);
+            this.updateStatus('disconnected');
+            this.stopStreamingStatusRefresh();
+        });
+
+        this.obs.on('Identified', (data) => {
+            debug.log('OBS WebSocket identified:', data);
+            this.updateStatus('connected');
+            this.connected = true;
+            this.getScenes();
+            this.getStreamingStatus();
+            
+            // Test available methods to help debug
+            setTimeout(() => {
+                this.testOBSMethods();
+            }, 2000);
+            
+            // Set up periodic streaming status refresh
+            this.startStreamingStatusRefresh();
+        });
+
+        // OBS events
+        this.obs.on('SceneListChanged', (data) => {
+            debug.log('Scene list changed:', data);
+            this.scenes = data.scenes || [];
+            this.updateSceneSelect();
+        });
+
+        this.obs.on('CurrentProgramSceneChanged', (data) => {
+            debug.log('Current scene changed:', data);
+            this.currentScene = data.sceneName;
+            this.updateSceneSelect(); // Refresh buttons to show active state
+        });
+
+        this.obs.on('StreamStateChanged', (data) => {
+            debug.log('Stream state changed:', data);
+            // Handle different OBS WebSocket versions
+            if (data.outputState) {
+                this.streaming = data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED';
+            } else if (data.streaming !== undefined) {
+                this.streaming = data.streaming;
+            } else if (data.active !== undefined) {
+                this.streaming = data.active;
+            }
+            this.updateStreamButtons();
+        });
+
+        // Also listen for the older event name
+        this.obs.on('SwitchScenes', (data) => {
+            debug.log('Scene switched (old event):', data);
+            this.currentScene = data.sceneName;
+            this.updateSceneSelect(); // Refresh buttons to show active state
+        });
+
+        // Also listen for the older streaming event names
+        this.obs.on('StreamStarting', () => {
+            debug.log('Stream starting event received');
+            this.streaming = true;
+            this.updateStreamButtons();
+        });
+
+        this.obs.on('StreamStarted', () => {
+            debug.log('Stream started event received');
+            this.streaming = true;
+            this.updateStreamButtons();
+        });
+
+        this.obs.on('StreamStopping', () => {
+            debug.log('Stream stopping event received');
+            this.streaming = false;
+            this.updateStreamButtons();
+        });
+
+        this.obs.on('StreamStopped', () => {
+            debug.log('Stream stopped event received');
+            this.streaming = false;
+            this.updateStreamButtons();
+        });
+    }
+
+    parseWebSocketUrl(url) {
+        if (!url) return;
+
+        debug.log('Parsing OBS WebSocket URL:', url);
+
+        try {
+            let wsUrl = url;
+            let password = null;
+            let scenes = [];
+            
+            // Check if URL contains query parameters
+            if (url.includes('?') || url.includes('&')) {
+                const urlParts = url.split('?');
+                wsUrl = urlParts[0];
+                const queryString = urlParts[1] || '';
+                
+                debug.log('Base WebSocket URL:', wsUrl);
+                debug.log('Query string:', queryString);
+                
+                // Parse all query parameters first
+                const params = {};
+                if (queryString) {
+                    const paramPairs = queryString.split('&');
+                    paramPairs.forEach(param => {
+                const [key, value] = param.split('=');
+                        debug.log('Processing parameter:', key, '=', value);
+                        
+                if (key === 'scenes') {
+                            try {
+                                // Handle empty or missing scenes parameter
+                                if (!value || value.trim() === '' || value === '[]') {
+                                    // No scenes specified - allow full control
+                                    scenes = [];
+                                    debug.log('No scenes specified - allowing full control');
+                                } else {
+                                    const sceneNames = JSON.parse(decodeURIComponent(value));
+                                    // Check if the parsed result is empty or invalid
+                                    if (!Array.isArray(sceneNames) || sceneNames.length === 0) {
+                                        // Empty array or invalid data - allow full control
+                                        scenes = [];
+                                        debug.log('Empty or invalid scenes array - allowing full control');
+                                    } else {
+                                        // Valid scenes specified - store them for filtering
+                                        scenes = sceneNames.filter(name => name !== null);
+                                        debug.log('Scenes specified for restricted control:', scenes);
+                                    }
+                                }
+                            } catch (e) {
+                                debug.error('Error parsing scenes:', e);
+                                // On parsing error, allow full control
+                                scenes = [];
+                                debug.log('Scene parsing error - allowing full control');
+                            }
+                } else if (key === 'pass') {
+                            password = value;
+                            debug.log('Parsed password:', password ? '***' : 'none');
+                        }
+                    });
+                }
+            }
+
+            // Convert to WebSocket URL if needed
+            if (!wsUrl.startsWith('ws://') && !wsUrl.startsWith('wss://')) {
+                if (wsUrl.startsWith('http://')) {
+                    wsUrl = wsUrl.replace('http://', 'ws://');
+                } else if (wsUrl.startsWith('https://')) {
+                    wsUrl = wsUrl.replace('https://', 'wss://');
+                } else {
+                    wsUrl = 'wss://' + wsUrl;
+                }
+                debug.log('Converted WebSocket URL:', wsUrl);
+            }
+
+            // Store the parsed components
+            this.allowedScenes = scenes;
+            
+            debug.log('Final connection parameters:', {
+                url: wsUrl,
+                hasPassword: !!password,
+                sceneCount: scenes.length,
+                allowFullControl: scenes.length === 0
+            });
+
+            // Connect using the parsed WebSocket URL and password
+            this.connect(wsUrl, password);
+        } catch (error) {
+            debug.error('Error parsing OBS WebSocket URL:', error);
+        }
+    }
+
+    async connect(url, password) {
+        debug.log('Attempting to connect to OBS WebSocket:', url);
+        
+        if (this.obs.identified) {
+            debug.log('Closing existing OBS WebSocket connection');
+            await this.obs.disconnect();
+        }
+
+        this.updateStatus('connecting');
+        this.updateSceneSelect();
+
+        try {
+            debug.log('Creating new OBS WebSocket connection to:', url);
+            
+            const result = await this.obs.connect(url, password, {
+                rpcVersion: 1
+            });
+            
+            debug.log('OBS WebSocket connected successfully:', result);
+            
+        } catch (error) {
+            debug.error('Error connecting to OBS WebSocket:', error);
+            this.updateStatus('disconnected');
+        }
+    }
+
+    async getScenes() {
+        try {
+            const result = await this.obs.call('GetSceneList');
+            const allScenes = result.scenes || [];
+            
+            debug.log('All available scenes from OBS:', allScenes.map(s => s.sceneName));
+            debug.log('Allowed scenes filter:', this.allowedScenes);
+            
+            // Filter scenes to only include those in the allowedScenes array
+            if (this.allowedScenes.length > 0) {
+                this.scenes = allScenes.filter(scene => 
+                    this.allowedScenes.includes(scene.sceneName)
+                );
+                debug.log('Filtered scenes (restricted control):', this.scenes.map(s => s.sceneName));
+            } else {
+                // If no allowed scenes specified, use all scenes (full control)
+                this.scenes = allScenes;
+                debug.log('Using all scenes (full control):', this.scenes.map(s => s.sceneName));
+            }
+            
+            // Get current scene
+            try {
+                const currentSceneResult = await this.obs.call('GetCurrentProgramScene');
+                this.currentScene = currentSceneResult.currentProgramSceneName;
+                debug.log('Current scene retrieved:', this.currentScene);
+            } catch (error) {
+                debug.log('Could not get current scene, using first scene as default');
+                this.currentScene = this.scenes.length > 0 ? this.scenes[0].sceneName : '';
+            }
+            
+            // Update the scene display with current scene information
+            this.updateSceneSelect();
+            debug.log('Scenes loaded with current scene:', this.currentScene);
+            debug.log('Control mode:', this.allowedScenes.length > 0 ? 'Restricted' : 'Full');
+            
+            // Log detailed control mode information
+            this.logControlMode();
+        } catch (error) {
+            debug.error('Error getting scenes:', error);
+        }
+    }
+
+    async getStreamingStatus() {
+        try {
+            debug.log('Getting streaming status...');
+            
+            // Try different methods to get streaming status
+            let result;
+            try {
+                result = await this.obs.call('GetStreamingStatus');
+                debug.log('GetStreamingStatus result:', result);
+            } catch (error) {
+                debug.log('GetStreamingStatus failed, trying GetStreamStatus...');
+                try {
+                    result = await this.obs.call('GetStreamStatus');
+                    debug.log('GetStreamStatus result:', result);
+                } catch (error2) {
+                    debug.log('GetStreamStatus failed, trying GetOutputStatus...');
+                    result = await this.obs.call('GetOutputStatus', { outputName: 'default_stream' });
+                    debug.log('GetOutputStatus result:', result);
+                }
+            }
+            
+            // Handle different response formats
+            if (result.outputActive !== undefined) {
+                this.streaming = result.outputActive;
+            } else if (result.streaming !== undefined) {
+                this.streaming = result.streaming;
+            } else if (result.active !== undefined) {
+                this.streaming = result.active;
+            } else if (result.outputState) {
+                this.streaming = result.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED';
+            } else {
+                debug.log('Unknown streaming status format:', result);
+                this.streaming = false;
+            }
+            
+            this.updateStreamButtons();
+            debug.log('Streaming status updated:', this.streaming);
+            
+        } catch (error) {
+            debug.error('Error getting streaming status:', error);
+            // Set to false if we can't get the status
+            this.streaming = false;
+            this.updateStreamButtons();
+        }
+    }
+
+    async switchScene(sceneName) {
+        if (!this.connected || !sceneName) return;
+
+        try {
+            await this.obs.call('SetCurrentProgramScene', { sceneName });
+            this.currentScene = sceneName;
+            debug.log('Switched to scene:', sceneName);
+            
+            // Update the display to reflect the new current scene
+            this.updateSceneSelect();
+        } catch (error) {
+            debug.error('Error switching scene:', error);
+        }
+    }
+
+    async toggleStream() {
+        if (!this.connected) {
+            debug.log('Cannot toggle stream: not connected');
+            return;
+        }
+
+        try {
+            debug.log('Toggling stream...');
+            
+            if (this.streaming) {
+                await this.stopStream();
+            } else {
+                await this.startStream();
+            }
+            
+        } catch (error) {
+            debug.error('Error toggling stream:', error);
+            this.updateStreamButtons();
+        }
+    }
+
+    async startStream() {
+        // Update button to show "Starting..."
+        if (this.streamToggleBtn) {
+            this.streamToggleBtn.textContent = 'Starting...';
+            this.streamToggleBtn.disabled = true;
+        }
+
+        try {
+            debug.log('Starting stream...');
+            
+            // Try different methods for starting stream
+            try {
+                await this.obs.call('StartStreaming');
+                debug.log('StartStreaming command sent successfully');
+            } catch (error) {
+                debug.log('StartStreaming failed, trying StartStream...');
+                try {
+                    await this.obs.call('StartStream');
+                    debug.log('StartStream command sent successfully');
+                } catch (error2) {
+                    debug.log('StartStream failed, trying StartOutput...');
+                    await this.obs.call('StartOutput', { outputName: 'default_stream' });
+                    debug.log('StartOutput command sent successfully');
+                }
+            }
+            
+            // Force update streaming status after a short delay
+            setTimeout(() => {
+                this.getStreamingStatus();
+            }, 1000);
+            
+        } catch (error) {
+            debug.error('Error starting stream:', error);
+            // Reset button on error
+            this.updateStreamButtons();
+        }
+    }
+
+    async stopStream() {
+        // Update button to show "Stopping..."
+        if (this.streamToggleBtn) {
+            this.streamToggleBtn.textContent = 'Stopping...';
+            this.streamToggleBtn.disabled = true;
+        }
+
+        try {
+            debug.log('Stopping stream...');
+            
+            // Try different methods for stopping stream
+            try {
+                await this.obs.call('StopStreaming');
+                debug.log('StopStreaming command sent successfully');
+            } catch (error) {
+                debug.log('StopStreaming failed, trying StopStream...');
+                try {
+                    await this.obs.call('StopStream');
+                    debug.log('StopStream command sent successfully');
+                } catch (error2) {
+                    debug.log('StopStream failed, trying StopOutput...');
+                    await this.obs.call('StopOutput', { outputName: 'default_stream' });
+                    debug.log('StopOutput command sent successfully');
+                }
+            }
+            
+            // Force update streaming status after a short delay
+            setTimeout(() => {
+                this.getStreamingStatus();
+            }, 1000);
+            
+        } catch (error) {
+            debug.error('Error stopping stream:', error);
+            // Reset button on error
+            this.updateStreamButtons();
+        }
+    }
+
+    updateStatus(status) {
+        if (this.connectionStatus) {
+            this.connectionStatus.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+            this.connectionStatus.className = `status-indicator ${status}`;
+        }
+    }
+
+    updateSceneSelect() {
+        if (!this.sceneButtonsContainer || !this.sceneDropdownContainer) return;
+
+        debug.log('Updating scene select with current scene:', this.currentScene);
+        debug.log('Control mode:', this.allowedScenes.length > 0 ? 'Restricted' : 'Full');
+
+        // Clear existing buttons and dropdown
+        this.sceneButtonsContainer.innerHTML = '';
+        this.sceneSelect.innerHTML = '';
+
+        const isConnected = this.connected && this.scenes.length > 0;
+        const useButtons = this.scenes.length <= this.maxSceneButtons;
+
+        if (useButtons) {
+            // Show buttons, hide dropdown
+            this.sceneButtonsContainer.style.display = 'flex';
+            this.sceneDropdownContainer.classList.remove('show');
+
+            if (this.scenes.length === 0) {
+                const noScenesMsg = document.createElement('div');
+                noScenesMsg.textContent = 'No scenes available';
+                noScenesMsg.style.color = '#666';
+                noScenesMsg.style.fontSize = '12px';
+                this.sceneButtonsContainer.appendChild(noScenesMsg);
+            } else {
+                this.scenes.forEach(scene => {
+                    const button = document.createElement('button');
+                    button.className = 'scene-btn';
+                    button.textContent = scene.sceneName;
+                    button.disabled = !isConnected;
+                    
+                    // Mark current scene as active
+                    if (scene.sceneName === this.currentScene) {
+                        button.classList.add('active');
+                        debug.log('Marking scene as active:', scene.sceneName);
+                    }
+                    
+                    button.addEventListener('click', () => {
+                        this.switchScene(scene.sceneName);
+                    });
+                    
+                    this.sceneButtonsContainer.appendChild(button);
+                });
+            }
+        } else {
+            // Show dropdown, hide buttons
+            this.sceneButtonsContainer.style.display = 'none';
+            this.sceneDropdownContainer.classList.add('show');
+
+        if (this.scenes.length === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No scenes available';
+            this.sceneSelect.appendChild(option);
+        } else {
+            this.scenes.forEach(scene => {
+                const option = document.createElement('option');
+                option.value = scene.sceneName;
+                option.textContent = scene.sceneName;
+                    if (scene.sceneName === this.currentScene) {
+                        option.selected = true;
+                        debug.log('Marking dropdown option as selected:', scene.sceneName);
+                    }
+                this.sceneSelect.appendChild(option);
+            });
+            }
+            
+            this.sceneSelect.disabled = !isConnected;
+        }
+    }
+
+    updateStreamButtons() {
+        const toggleBtn = this.streamToggleBtn;
+        
+        if (toggleBtn) {
+            const toggleDisabled = !this.connected;
+            toggleBtn.disabled = toggleDisabled;
+            
+            if (this.streaming) {
+                toggleBtn.textContent = 'Stop Stream';
+            } else {
+                toggleBtn.textContent = 'Start Stream';
+            }
+        }
+        
+        debug.log('Stream toggle updated:', {
+            connected: this.connected,
+            streaming: this.streaming,
+            toggleDisabled: !this.connected,
+            toggleBtnExists: !!toggleBtn
+        });
+    }
+
+    loadConfigFromUrl() {
+        // Skip loading if we're currently updating the URL
+        if (window._updatingUrl) {
+            debug.log('Skipping loadConfigFromUrl - URL is being updated');
+            return;
+        }
+        
+        const params = new URLSearchParams(window.location.search);
+        debug.log("loadConfigFromUrl called with params:", params);
+
+        // VDO Ninja link (double decode)
+        const vdoLink = params.get('vdo');
+        if (vdoLink) {
+            let decodedVdoLink = decodeURIComponent(vdoLink);
+            if (decodedVdoLink.includes('%')) {
+                decodedVdoLink = decodeURIComponent(decodedVdoLink);
+            }
+            document.getElementById('VideoURL').value = decodedVdoLink;
+            document.getElementById('feed').src = decodedVdoLink;
+        }
+
+        // OBS VDO Ninja link (double decode)
+        const obsLink = params.get('obs');
+        if (obsLink) {
+            let decodedObsLink = decodeURIComponent(obsLink);
+            if (decodedObsLink.includes('%')) {
+                decodedObsLink = decodeURIComponent(decodedObsLink);
+            }
+            document.getElementById('ObsVdoUrl').value = decodedObsLink;
+            document.getElementById('obs').src = decodedObsLink;
+        }
+
+        // Chat URL
+        const chatUrl = params.get('chat_url');
+        if (chatUrl) {
+            const decodedChatUrl = decodeURIComponent(chatUrl);
+            document.getElementById('ChatUrl').value = decodedChatUrl;
+            document.getElementById('chat').src = decodedChatUrl;
+        }
+
+        // Stone size
+        const stoneSize = params.get('stone');
+        if (stoneSize) document.getElementById('StoneSize').value = stoneSize;
+
+        // Grid corners
+        const grid = params.get('grid');
+        if (grid && overlay) {
+            overlay.points = grid.split(';').map(pt => pt.split(',').map(Number));
+            if (overlay.points.length === 4) {
+                overlay.grid = overlay.generateGrid(overlay.points);
+                overlay.isGridSet = true;
+            }
+        }
+
+        // Set grid to show for 3 seconds, then hide
+        if (window.overlay) {
+            overlay.show = true;
+            overlay.updateGridButtonState();
+            setTimeout(() => {
+                overlay.show = false;
+                overlay.updateGridButtonState();
+            }, 3000);
+        } else {
+            // If overlay isn't ready yet, set a flag to do this after overlay is created
+            window._pendingGridAutoHide = true;
+        }
+
+        // OBS WebSocket
+        const obsWebSocket = params.get('obs_ws');
+        if (obsWebSocket) {
+            let decodedWebSocket = decodeURIComponent(obsWebSocket);
+            if (decodedWebSocket.includes('%')) {
+                decodedWebSocket = decodeURIComponent(decodedWebSocket);
+            }
+            
+            // Only update the input field if it's empty or different from the current value
+            // This prevents the input from being modified when the user is actively editing it
+            const currentInput = document.getElementById('ObsWebSocket');
+            if (currentInput && (currentInput.value === '' || currentInput.value !== decodedWebSocket)) {
+                currentInput.value = decodedWebSocket;
+            }
+            
+            // Trigger OBS connection if the controller is available
+            if (window.obsController) {
+                debug.log('Triggering OBS connection from URL parameter');
+                window.obsController.parseWebSocketUrl(decodedWebSocket);
+            } else {
+                // If controller isn't ready yet, set a flag to connect after initialization
+                window._pendingObsConnection = decodedWebSocket;
+            }
+        }
+    }
+
+    logControlMode() {
+        debug.log('=== OBS CONTROL MODE ===');
+        debug.log('Allowed scenes:', this.allowedScenes);
+        debug.log('Total scenes available:', this.scenes.length);
+        debug.log('Current scene:', this.currentScene);
+        debug.log('Control mode:', this.allowedScenes.length > 0 ? 'Restricted' : 'Full');
+        
+        if (this.allowedScenes.length > 0) {
+            debug.log('Restricted control - only these scenes are accessible:');
+            this.allowedScenes.forEach(scene => {
+                const isAvailable = this.scenes.some(s => s.sceneName === scene);
+                debug.log(`  ${scene}: ${isAvailable ? 'AVAILABLE' : 'NOT FOUND'}`);
+            });
+        } else {
+            debug.log('Full control - all scenes are accessible');
+        }
+        debug.log('=== END CONTROL MODE ===');
+    }
+
+    async testOBSMethods() {
+        debug.log('Testing OBS WebSocket methods...');
+        
+        try {
+            // Test getting version info
+            const version = await this.obs.call('GetVersion');
+            debug.log('OBS Version:', version);
+            
+            // Test getting stats
+            const stats = await this.obs.call('GetStats');
+            debug.log('OBS Stats:', stats);
+            
+        } catch (error) {
+            debug.error('Error testing OBS methods:', error);
+        }
+    }
+
+    startStreamingStatusRefresh() {
+        debug.log('Starting streaming status refresh...');
+        this.stopStreamingStatusRefresh(); // Clear any existing interval
+        
+        this.streamingStatusInterval = setInterval(() => {
+            if (this.connected) {
+                this.getStreamingStatus();
+            }
+        }, 5000); // Check every 5 seconds
+    }
+
+    stopStreamingStatusRefresh() {
+        if (this.streamingStatusInterval) {
+            debug.log('Stopping streaming status refresh...');
+            clearInterval(this.streamingStatusInterval);
+            this.streamingStatusInterval = null;
         }
     }
 }
@@ -1055,6 +1940,17 @@ function main() {
         // 4. Set up UIManager, IframeManager, etc.
         const iframeManager = new IframeManager();
         const uiManager = new UIManager(iframeManager);
+        const obsController = new OBSController();
+        
+        // Make OBS controller globally accessible for URL generation
+        window.obsController = obsController;
+
+        // Handle any pending OBS connection from URL parameters
+        if (window._pendingObsConnection) {
+            debug.log('Processing pending OBS connection');
+            obsController.parseWebSocketUrl(window._pendingObsConnection);
+            window._pendingObsConnection = null;
+        }
 
         // 5. Start animation loop
     let overlayLoop = () => {
@@ -1067,6 +1963,9 @@ function main() {
 }
 
 function updateShareableUrl() {
+    // Set a flag to prevent loadConfigFromUrl from being called during URL updates
+    window._updatingUrl = true;
+    
     const params = new URLSearchParams();
 
     // Only chat_url param for chat
@@ -1087,13 +1986,44 @@ function updateShareableUrl() {
     if (obsLink) {
         params.set('obs', encodeURIComponent(encodeURIComponent(obsLink)));
     }
+    // Add obs_ws param last
+    const obsWebSocket = document.getElementById('ObsWebSocket').value;
+    if (obsWebSocket) {
+        // Use the original WebSocket URL without modification
+        let formattedUrl = obsWebSocket;
+        
+        // Only add scenes parameter if we're in restricted control mode
+        if (window.obsController && window.obsController.allowedScenes && window.obsController.allowedScenes.length > 0) {
+            const scenesParam = encodeURIComponent(JSON.stringify(window.obsController.allowedScenes));
+            formattedUrl += `&scenes=${scenesParam}`;
+            debug.log('Adding scenes parameter to shareable URL (restricted control):', window.obsController.allowedScenes);
+        } else {
+            debug.log('No scenes parameter added to shareable URL (full control mode)');
+        }
+        
+        // Note: We don't include the password in the shareable URL for security
+        // The password should be entered manually by the user
+        
+        params.set('obs_ws', encodeURIComponent(encodeURIComponent(formattedUrl)));
+    }
     let url = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState({}, '', url);
+    
+    // Clear the flag after a short delay to allow normal URL loading
+    setTimeout(() => {
+        window._updatingUrl = false;
+    }, 100);
 }
 
 function loadConfigFromUrl() {
+    // Skip loading if we're currently updating the URL
+    if (window._updatingUrl) {
+        debug.log('Skipping loadConfigFromUrl - URL is being updated');
+        return;
+    }
+    
     const params = new URLSearchParams(window.location.search);
-    console.log("loadConfigFromUrl called with params:", params);
+    debug.log("loadConfigFromUrl called with params:", params);
 
     // VDO Ninja link (double decode)
     const vdoLink = params.get('vdo');
@@ -1151,11 +2081,36 @@ function loadConfigFromUrl() {
         // If overlay isn't ready yet, set a flag to do this after overlay is created
         window._pendingGridAutoHide = true;
     }
+
+    // OBS WebSocket
+    const obsWebSocket = params.get('obs_ws');
+    if (obsWebSocket) {
+        let decodedWebSocket = decodeURIComponent(obsWebSocket);
+        if (decodedWebSocket.includes('%')) {
+            decodedWebSocket = decodeURIComponent(decodedWebSocket);
+        }
+        
+        // Only update the input field if it's empty or different from the current value
+        // This prevents the input from being modified when the user is actively editing it
+        const currentInput = document.getElementById('ObsWebSocket');
+        if (currentInput && (currentInput.value === '' || currentInput.value !== decodedWebSocket)) {
+            currentInput.value = decodedWebSocket;
+        }
+        
+        // Trigger OBS connection if the controller is available
+        if (window.obsController) {
+            debug.log('Triggering OBS connection from URL parameter');
+            window.obsController.parseWebSocketUrl(decodedWebSocket);
+        } else {
+            // If controller isn't ready yet, set a flag to connect after initialization
+            window._pendingObsConnection = decodedWebSocket;
+        }
+    }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
     // Attach updateShareableUrl to relevant inputs
-    ['VideoURL', 'ChatUrl', 'StoneSize'].forEach(id => {
+    ['VideoURL', 'ChatUrl', 'StoneSize', 'ObsWebSocket', 'ObsVdoUrl'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', updateShareableUrl);
     });
@@ -1185,12 +2140,67 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     // Keybindings
     document.addEventListener('keydown', (e) => {
+        // Don't trigger shortcuts if user is typing in any input field
+        const activeElement = document.activeElement;
+        
+        // Debug logging for input field detection
+        debug.log('=== KEYBOARD DEBUG ===');
+        debug.log('Key pressed:', e.key);
+        debug.log('Active element:', activeElement);
+        debug.log('Active element tagName:', activeElement ? activeElement.tagName : 'null');
+        debug.log('Active element type:', activeElement ? activeElement.type : 'null');
+        debug.log('Active element contentEditable:', activeElement ? activeElement.contentEditable : 'null');
+        
+        // Check if we're in any kind of input field
+        const isInputField = activeElement && (
+            activeElement.tagName === 'INPUT' || 
+            activeElement.tagName === 'TEXTAREA' || 
+            activeElement.tagName === 'SELECT' ||
+            activeElement.contentEditable === 'true' ||
+            activeElement.contentEditable === 'plaintext-only' ||
+            activeElement.role === 'textbox' ||
+            activeElement.role === 'searchbox' ||
+            activeElement.role === 'combobox'
+        );
+        
+        debug.log('Is input field:', isInputField);
+        
+        if (isInputField) {
+            debug.log('BLOCKING shortcut - user is typing in input field');
+            return; // Don't trigger shortcuts when typing in inputs - allow normal typing
+        }
+        
+        // Check if we're focused on the canvas/overlay or main feed area
+        const mainFeedGroup = document.querySelector('.MainFeed');
+        const overlayCanvas = document.getElementById('overlay');
+        const drawingLayer = document.getElementById('drawingLayer');
+        
+        const isCanvasFocused = activeElement === overlayCanvas || 
+                               activeElement === drawingLayer ||
+                               (mainFeedGroup && mainFeedGroup.contains(activeElement));
+        
+        debug.log('Is canvas focused:', isCanvasFocused);
+        
+        if (!isCanvasFocused) {
+            debug.log('BLOCKING shortcut - not focused on canvas');
+            return; // Don't trigger shortcuts when not focused on canvas/overlay
+        }
+        
+        debug.log('ALLOWING shortcut');
+        
+        // Only handle specific shortcuts and prevent default only for those
         if (e.key === 's') {
+            debug.log('Toggling grid visibility');
+            e.preventDefault(); // Prevent default only for handled shortcuts
             overlay.show = !overlay.show;
             overlay.updateGridButtonState();
         } else if (e.key === 'r') {
+            debug.log('Resetting grid');
+            e.preventDefault(); // Prevent default only for handled shortcuts
             overlay.resetGrid();
         }
+        
+        debug.log('=== END KEYBOARD DEBUG ===');
     });
 
     // Initialize LetterBtn with 'A' instead of emoji
