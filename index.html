@@ -10,7 +10,7 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
     >
-    <script src="https://cdn.jsdelivr.net/npm/obs-websocket-js@5.0.6/dist/obs-ws.global.min.js"></script>
+
   </head>
   <body>
     <div class="page-container">
@@ -49,8 +49,14 @@
             >
               ⚪
             </button>
+            <button
+              id="AlternatingBtn"
+              class="tool-btn"
+              title="Alternating Stones (Black/White)"
+            >
+              ⚫⚪
+            </button>
             <button id="PenBtn" class="tool-btn" title="Free Draw">✏️</button>
-            <button id="EraserBtn" class="tool-btn" title="Erase">🧹</button>
             <button id="TriangleBtn" class="tool-btn" title="Triangle Mark">
               △
             </button>
@@ -61,7 +67,7 @@
               □
             </button>
             <button id="LetterBtn" class="tool-btn" title="Place Letter">
-              🆎
+              A
             </button>
             <button id="GridBtn" class="tool-btn" title="Toggle Grid">
               #
@@ -76,6 +82,9 @@
               title="Markup/Letter Color"
               style="width: 32px; height: 32px; border: none; background: none; margin-left: 8px; vertical-align: middle"
             >
+            <div class="shortcut-help">
+              <span>Shortcuts: S=Grid | R=Reset | Space=Clear | Del=Erase Drawing</span>
+            </div>
           </div>
         </div>
 
@@ -83,9 +92,9 @@
         <div id="settingsPanel" class="tool-panel hidden">
           <div class="settings-group">
             <div class="setting-item">
-              <label for="VideoURL" title="Room Name for VDO Ninja"
-              >Real Board:</label>
-              <input type="text" id="VideoURL" placeholder="Room Name">
+              <label for="VideoURL" title="VDO Ninja Camera for Canvas Dimensions"
+              >Camera Link:</label>
+              <input type="text" id="VideoURL" placeholder="VDO Ninja view link for canvas dimensions">
             </div>
             <div class="setting-item">
               <label for="StoneSize" title="Adjust Stone Size"
@@ -105,16 +114,11 @@
                 placeholder="Paste OBS VDO Ninja link here"
               >
             </div>
+
             <div class="setting-item">
-              <label for="ObsWebSocket" title="OBS WebSocket Connection"
-              >OBS WebSocket:</label>
-              <input
-                type="text"
-                id="ObsWebSocket"
-                placeholder="ws://localhost:4455&scenes=[]&pass=password"
-              >
-            </div>
-            <div class="setting-item">
+              <button id="copyViewerUrl" title="Copy Viewer URL for Chroma Key">
+                Copy Viewer URL
+              </button>
               <button id="copyShareUrl" title="Copy Shareable URL">
                 Copy Share URL
               </button>
@@ -168,7 +172,20 @@
         <p>This website was designed and developed by TangJieHao.</p>
       </div>
 
-      <script text="html" src="./APP.js"></script>
+      <!-- Load modules in dependency order -->
+      <script type="module" src="./js/constants.js"></script>
+      <script type="module" src="./js/utils/debugger.js"></script>
+      <script type="module" src="./js/utils/dom-elements.js"></script>
+      <script type="module" src="./js/canvas/drawing-layer.js"></script>
+      <script type="module" src="./js/canvas/canvas.js"></script>
+      <script type="module" src="./js/managers/iframe-manager.js"></script>
+      <script type="module" src="./js/media/video.js"></script>
+      <script type="module" src="./js/managers/config-manager.js"></script>
+      <script type="module" src="./js/managers/ui-manager.js"></script>
+      <script type="module" src="./js/obs/obs-controller.js"></script>
+      <script type="module" src="./js/viewer/viewer-controller.js"></script>
+      <script type="module" src="./js/viewer/commentator-sender.js"></script>
+      <script type="module" src="./js/main.js"></script>
     </div>
   </body>
 </html>
