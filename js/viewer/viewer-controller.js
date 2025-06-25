@@ -252,9 +252,18 @@ export class ViewerController {
     }
     
     placeStone(x, y, color) {
-        if (window.overlay && window.overlay.placeStone) {
-            window.overlay.placeStone(x, y, color);
-            debug.log('🔴 Placed stone at:', x, y, 'color:', color);
+        if (color === 'BOARD' || color === 'REMOVE_BOARD') {
+            // Handle board stones
+            if (window.overlay && window.overlay.placeBoardStone) {
+                window.overlay.placeBoardStone(x, y, color);
+                debug.log('🔴 Board stone action:', color, 'at:', x, y);
+            }
+        } else {
+            // Handle regular stones
+            if (window.overlay && window.overlay.placeStone) {
+                window.overlay.placeStone(x, y, color);
+                debug.log('🔴 Placed stone at:', x, y, 'color:', color);
+            }
         }
     }
     

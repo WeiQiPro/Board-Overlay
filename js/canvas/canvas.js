@@ -487,6 +487,10 @@ export class Canvas {
                 );
                 if (existingBoardStoneIndex >= 0) {
                     this.boardStones.splice(existingBoardStoneIndex, 1);
+                    // Send board stone removal to viewer
+                    if (window.commentatorSender && !window.isViewerMode) {
+                        window.commentatorSender.sendStone(point[0], point[1], 'REMOVE_BOARD');
+                    }
                 } else {
                     // Remove any variation stone at this position
                     let existingStoneIndex = this.stones.findIndex(([x, y]) =>
@@ -496,6 +500,17 @@ export class Canvas {
                         this.stones.splice(existingStoneIndex, 1);
                     }
                     this.boardStones.push([point[0], point[1], STONES.BOARD]);
+                    
+                    // Send board stone placement to viewer
+                    if (window.commentatorSender && !window.isViewerMode) {
+                        window.commentatorSender.sendStone(point[0], point[1], 'BOARD');
+                        
+                        // Also send current grid coordinates with board stone placement
+                        if (this.points && this.points.length === 4) {
+                            window.commentatorSender.sendGridCoordinates(this.points);
+                            debug.log('📐 Sent grid coordinates with board stone placement:', this.points);
+                        }
+                    }
                 }
             } else if (event.button === 0) { // Left click - handle variation stones
                 let existingStoneIndex = this.stones.findIndex(([x, y]) =>
@@ -802,6 +817,38 @@ export class Canvas {
             
             // Add the new stone
             this.stones.push([x, y, STONES[color]]);
+        }
+    }
+    
+    placeBoardStone(x, y, action) {
+        // Method for viewer to place/remove board stones programmatically
+        if (action === 'REMOVE_BOARD') {
+            // Remove board stone at this position
+            let existingBoardStoneIndex = this.boardStones.findIndex(([stoneX, stoneY]) =>
+                stoneX === x && stoneY === y
+            );
+            if (existingBoardStoneIndex >= 0) {
+                this.boardStones.splice(existingBoardStoneIndex, 1);
+            }
+        } else if (action === 'BOARD') {
+            // Remove any existing stone at this position first
+            let existingStoneIndex = this.stones.findIndex(([stoneX, stoneY]) =>
+                stoneX === x && stoneY === y
+            );
+            if (existingStoneIndex >= 0) {
+                this.stones.splice(existingStoneIndex, 1);
+            }
+            
+            // Remove any existing board stone at this position
+            let existingBoardStoneIndex = this.boardStones.findIndex(([stoneX, stoneY]) =>
+                stoneX === x && stoneY === y
+            );
+            if (existingBoardStoneIndex >= 0) {
+                this.boardStones.splice(existingBoardStoneIndex, 1);
+            }
+            
+            // Add the board stone
+            this.boardStones.push([x, y, STONES.BOARD]);
         }
     }
 } 
