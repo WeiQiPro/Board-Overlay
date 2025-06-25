@@ -264,22 +264,10 @@ function generateViewerUrl() {
         }
     }
     
-    // Copy other parameters (grid, vdo, etc.) but modify VDO links
+    // Copy other parameters but exclude video feed since viewer is transparent overlay only
     for (const [key, value] of currentUrl.searchParams) {
-        if (key !== 'viewer' && key !== 'obs') { // Don't copy viewer or obs since we handled them above
-            if (key === 'vdo') {
-                // Modify VDO Ninja links to change push= to view=
-                let decodedVdoLink = decodeURIComponent(value);
-                if (decodedVdoLink.includes('%')) {
-                    decodedVdoLink = decodeURIComponent(decodedVdoLink);
-                }
-                
-                // Replace push= with view= in the VDO link
-                const modifiedVdoLink = decodedVdoLink.replace(/push=([^&]+)/, 'view=$1');
-                viewerUrl.searchParams.set(key, encodeURIComponent(encodeURIComponent(modifiedVdoLink)));
-            } else {
-                viewerUrl.searchParams.set(key, value);
-            }
+        if (key !== 'viewer' && key !== 'obs' && key !== 'grid' && key !== 'vdo') {
+            viewerUrl.searchParams.set(key, value);
         }
     }
     
@@ -369,12 +357,12 @@ function main() {
                 
                 if (roomName) {
                     commentatorSender.enable(roomName);
-                    debug.log('📡 Viewer broadcasting enabled for room:', roomName);
+                    debug.log('📡 Data channel communication enabled for OBS room:', roomName);
                 } else {
-                    debug.error('❌ Could not extract room name from OBS URL');
+                    debug.error('❌ Could not extract room name from OBS Camera URL');
                 }
             } else {
-                debug.error('❌ No OBS URL found for broadcasting');
+                debug.error('❌ No OBS Camera URL found - cannot establish data channel communication');
             }
             
             // Set up copy viewer URL button

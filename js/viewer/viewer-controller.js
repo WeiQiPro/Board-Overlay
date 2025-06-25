@@ -48,20 +48,16 @@ export class ViewerController {
             return;
         }
         
-        // Create clean dedicated iframe for data communication (like VDO drawing tool)
-        const iframe = document.createElement("iframe");
-        iframe.src = `https://vdo.ninja/?view=${roomName}&cleanoutput`;
-        iframe.style.width = "0px";
-        iframe.style.height = "0px";
-        iframe.style.position = "fixed";
-        iframe.style.left = "-100px";
-        iframe.style.top = "-100px";
-        iframe.id = "dataChannelViewerFrame";
-        document.body.appendChild(iframe);
-        this.vdoFrame = iframe;
+        // Use existing OBS iframe for data communication
+        this.vdoFrame = document.getElementById('obs');
         
-        debug.log('🎥 Created clean data channel viewer iframe for room:', roomName);
-        debug.log('🎥 Data channel iframe src:', this.vdoFrame.src);
+        if (!this.vdoFrame) {
+            debug.error('❌ OBS iframe not found in viewer mode');
+            return;
+        }
+        
+        debug.log('🎥 Using existing OBS iframe for data communication in room:', roomName);
+        debug.log('🎥 OBS iframe src:', this.vdoFrame.src);
         
         // Listen for messages
         this.setupMessageListener();
@@ -71,6 +67,12 @@ export class ViewerController {
             this.connectionEstablished = true;
             this.startViewerPing();
             debug.log('🎥 Viewer ping system started after connection delay');
+            
+            // Request grid info after additional delay to ensure host is ready
+            setTimeout(() => {
+                this.requestGridInfo();
+                debug.log('🎥 Requested grid info after extended delay');
+            }, 2000);
         }, 3000);
     }
     
@@ -133,6 +135,10 @@ export class ViewerController {
                 
             case 'set-grid':
                 this.setGrid(command.points);
+                break;
+                
+            case 'grid-info':
+                this.handleGridInfo(command);
                 break;
                 
             case 'place-stone':
@@ -459,6 +465,17 @@ export class ViewerController {
         debug.log(`🏓 Host ping response received: ${responseTime}ms total round-trip`);
     }
     
+    handleGridInfo(command) {
+        debug.log('📐 Received current grid info from host:', command);
+        
+        if (command.points && command.points.length === 4) {
+            this.setGrid(command.points);
+            debug.log('📐 Applied current grid from host');
+        } else {
+            debug.log('📐 Host has no grid set currently');
+        }
+    }
+    
     setGrid(points) {
         if (window.overlay && points && points.length === 4) {
             window.overlay.points = points;
@@ -475,6 +492,24 @@ export class ViewerController {
                 window.overlay.show = wasVisible;
                 window.overlay.updateGridButtonState();
             }, 2000);
+        }
+    }
+    
+    requestGridInfo() {
+        if (!this.vdoFrame || !this.connectionEstablished) return;
+        
+        try {
+            this.vdoFrame.contentWindow.postMessage({
+                "sendData": JSON.stringify({
+                    action: 'request-grid',
+                    timestamp: Date.now()
+                }),
+                "type": "pcs"
+            }, '*');
+            
+            debug.log('📐 Requested current grid info from host');
+        } catch (error) {
+            debug.error('❌ Failed to request grid info:', error);
         }
     }
 } 
