@@ -44,6 +44,11 @@ function updateShareableUrl() {
     let url = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState({}, '', url);
     
+    // Regenerate viewer URL when input fields change
+    if (!window.isViewerMode) {
+        window.currentViewerUrl = generateViewerUrl();
+    }
+    
     // Clear the flag after a short delay to allow normal URL loading
     setTimeout(() => {
         window._updatingUrl = false;
@@ -237,24 +242,18 @@ function setupViewerMode() {
 
 function generateViewerUrl() {
     const baseUrl = window.location.origin + window.location.pathname;
-    const currentUrl = new URL(window.location);
     
-    // Create viewer URL with viewer=yes and obs= parameters
+    // Create viewer URL with viewer=yes parameter
     const viewerUrl = new URL(baseUrl);
-    
-    // Add viewer=yes parameter first
     viewerUrl.searchParams.set('viewer', 'yes');
     
-    // Get the OBS URL and create clean viewer URL with only view=roomname&datamode
-    const obsUrl = currentUrl.searchParams.get('obs');
-    if (obsUrl) {
-        let decodedObsLink = decodeURIComponent(obsUrl);
-        if (decodedObsLink.includes('%')) {
-            decodedObsLink = decodeURIComponent(decodedObsLink);
-        }
+    // Get the OBS URL from input field and create clean viewer URL
+    const obsUrlInput = document.getElementById('ObsVdoUrl');
+    if (obsUrlInput && obsUrlInput.value.trim()) {
+        let obsLink = obsUrlInput.value.trim();
         
-        // Extract room name from host URL
-        const obsParams = new URLSearchParams(decodedObsLink.split('?')[1] || '');
+        // Extract room name from OBS URL
+        const obsParams = new URLSearchParams(obsLink.split('?')[1] || '');
         const roomName = obsParams.get('push') || obsParams.get('view');
         
         if (roomName) {
@@ -264,11 +263,17 @@ function generateViewerUrl() {
         }
     }
     
-    // Copy other parameters but exclude video feed since viewer is transparent overlay only
-    for (const [key, value] of currentUrl.searchParams) {
-        if (key !== 'viewer' && key !== 'obs' && key !== 'grid' && key !== 'vdo') {
-            viewerUrl.searchParams.set(key, value);
-        }
+    // Add chat URL from input field
+    const chatUrlInput = document.getElementById('ChatUrl');
+    if (chatUrlInput && chatUrlInput.value.trim()) {
+        const chatUrl = chatUrlInput.value.trim();
+        viewerUrl.searchParams.set('chat_url', encodeURIComponent(chatUrl));
+    }
+    
+    // Add grid coordinates if available
+    if (window.overlay && window.overlay.points && window.overlay.points.length === 4) {
+        const gridCoords = window.overlay.points.map(pt => pt.map(Number).map(n => Math.round(n)).join(',')).join(';');
+        viewerUrl.searchParams.set('grid', gridCoords);
     }
     
     debug.log('Generated viewer URL:', viewerUrl.toString());
@@ -338,11 +343,9 @@ function main() {
             // Make controllers globally accessible
             window.obsController = obsController;
             window.commentatorSender = commentatorSender;
+            window.iframeManager = iframeManager;
             
-            // Generate initial viewer URL and automatically enable broadcasting
-            window.currentViewerUrl = generateViewerUrl();
-            
-            // Extract room name from OBS URL for broadcasting
+            // Now that commentator sender is available, process OBS URL if it was loaded from parameters
             const params = new URLSearchParams(window.location.search);
             let obsUrl = params.get('obs');
             if (obsUrl) {
@@ -364,6 +367,9 @@ function main() {
             } else {
                 debug.error('❌ No OBS Camera URL found - cannot establish data channel communication');
             }
+            
+            // Generate initial viewer URL
+            window.currentViewerUrl = generateViewerUrl();
             
             // Set up copy viewer URL button
             const copyViewerUrlBtn = document.getElementById('copyViewerUrl');
@@ -458,6 +464,17 @@ function main() {
                 if (window.overlay) {
                     window.overlay.resetGrid();
                 }
+            } else if (e.key === 'Delete' || e.key === 'Backspace') {
+                debug.log('Clearing drawing only with Delete key');
+                e.preventDefault();
+                // Clear only the drawing layer
+                if (window.drawingLayer) {
+                    window.drawingLayer.clearCanvas();
+                }
+                // Send clear drawing command to viewer
+                if (window.commentatorSender && !window.isViewerMode) {
+                    window.commentatorSender.sendClearDrawing();
+                }
             } else if (e.key === ' ' || e.code === 'Space') {
                 debug.log('Clearing stones and drawing with spacebar');
                 e.preventDefault();
@@ -468,9 +485,9 @@ function main() {
                 if (window.drawingLayer) {
                     window.drawingLayer.clearCanvas();
                 }
-                // Send clear command to viewer (only once)
+                // Send clear all command to viewer
                 if (window.commentatorSender && !window.isViewerMode) {
-                    window.commentatorSender.sendClear();
+                    window.commentatorSender.sendClearAll();
                 }
             }
         });

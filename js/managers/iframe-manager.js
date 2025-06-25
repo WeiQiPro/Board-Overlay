@@ -63,6 +63,27 @@ export class IframeManager {
         }
     }
 
+    setDataChannelUrl(obsUrl) {
+        // Extract room name from OBS URL and recreate data channel
+        if (obsUrl && window.commentatorSender) {
+            const obsParams = new URLSearchParams(obsUrl.split('?')[1] || '');
+            const roomName = obsParams.get('view') || obsParams.get('push');
+            
+            if (roomName) {
+                debug.log('📡 Recreating data channel for new OBS room:', roomName);
+                
+                // Disable old connection
+                window.commentatorSender.disable();
+                
+                // Wait a moment then enable new connection
+                setTimeout(() => {
+                    window.commentatorSender.enable(roomName);
+                    debug.log('📡 Data channel recreated and enabled for OBS room:', roomName);
+                }, 500);
+            }
+        }
+    }
+
     setViewerUrl(roomId) {
         this.setVdoNinjaUrl('feed', {
             view: roomId,

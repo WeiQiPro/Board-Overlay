@@ -141,12 +141,12 @@ export class DrawingLayer {
                     if (window.overlay.currentMouseX !== undefined && window.overlay.currentMouseY !== undefined) {
                         // Only send if coordinates have changed
                         if (window.overlay.currentMouseX !== window.overlay.lastSentX || window.overlay.currentMouseY !== window.overlay.lastSentY) {
-                            window.commentatorSender.sendCommand({
-                                action: 'cursor-move',
-                                x: window.overlay.currentMouseX,
-                                y: window.overlay.currentMouseY,
-                                timestamp: Date.now()
-                            });
+                        window.commentatorSender.sendCommand({
+                            action: 'cursor-move',
+                            x: window.overlay.currentMouseX,
+                            y: window.overlay.currentMouseY,
+                            timestamp: Date.now()
+                        });
                             window.overlay.lastSentX = window.overlay.currentMouseX;
                             window.overlay.lastSentY = window.overlay.currentMouseY;
                         }
@@ -324,12 +324,12 @@ export class DrawingLayer {
                 if (window.overlay.currentMouseX !== undefined && window.overlay.currentMouseY !== undefined) {
                     // Only send if coordinates have changed
                     if (window.overlay.currentMouseX !== window.overlay.lastSentX || window.overlay.currentMouseY !== window.overlay.lastSentY) {
-                        window.commentatorSender.sendCommand({
-                            action: 'cursor-move',
-                            x: window.overlay.currentMouseX,
-                            y: window.overlay.currentMouseY,
-                            timestamp: Date.now()
-                        });
+                    window.commentatorSender.sendCommand({
+                        action: 'cursor-move',
+                        x: window.overlay.currentMouseX,
+                        y: window.overlay.currentMouseY,
+                        timestamp: Date.now()
+                    });
                         window.overlay.lastSentX = window.overlay.currentMouseX;
                         window.overlay.lastSentY = window.overlay.currentMouseY;
                     }

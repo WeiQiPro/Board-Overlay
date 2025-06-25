@@ -191,13 +191,13 @@ export class CommentatorSender {
         debug.log('📡 Created data channel room name:', dataRoomName, 'from OBS room:', roomName, 'seed:', seed);
         return dataRoomName;
     }
-
+    
     enable(roomName) {
         if (!roomName) {
             debug.error('❌ No room name provided for commentator sender');
             return;
         }
-
+        
         this.roomName = roomName;
         this.enabled = true;
         
@@ -225,7 +225,7 @@ export class CommentatorSender {
             this.isConnected = true;
             this.startHostPing();
             debug.log('📡 Host ping system started after connection delay');
-        }, 3000);
+        }, 1000); // Reduced from 3000ms to 1000ms for faster reconnection
         
         this.setupPingListener();
     }
@@ -308,6 +308,20 @@ export class CommentatorSender {
     }
     
     sendClear() {
+        this.sendCommand({
+            action: 'clear-drawing',
+            timestamp: Date.now()
+        });
+    }
+    
+    sendClearAll() {
+        this.sendCommand({
+            action: 'clear-all',
+            timestamp: Date.now()
+        });
+    }
+    
+    sendClearDrawing() {
         this.sendCommand({
             action: 'clear-drawing',
             timestamp: Date.now()

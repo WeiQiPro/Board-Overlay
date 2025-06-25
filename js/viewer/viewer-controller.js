@@ -225,6 +225,10 @@ export class ViewerController {
                 this.clearDrawing();
                 break;
                 
+            case 'clear-all':
+                this.clearAll();
+                break;
+                
             case 'reset-board':
                 this.resetBoard();
                 break;
@@ -331,7 +335,15 @@ export class ViewerController {
     }
     
     clearDrawing() {
-        // Clear both drawing layer AND stones (same as commentator spacebar)
+        // Clear only the drawing layer
+        if (window.drawingLayer && window.drawingLayer.clearCanvas) {
+            window.drawingLayer.clearCanvas();
+            debug.log('🧹 Cleared drawing layer only');
+        }
+    }
+    
+    clearAll() {
+        // Clear both drawing layer AND stones
         if (window.drawingLayer && window.drawingLayer.clearCanvas) {
             window.drawingLayer.clearCanvas();
             debug.log('🧹 Cleared drawing layer');

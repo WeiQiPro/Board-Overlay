@@ -571,12 +571,12 @@ export class Canvas {
                 if (this.currentMouseX !== undefined && this.currentMouseY !== undefined) {
                     // Only send if coordinates have changed
                     if (this.currentMouseX !== this.lastSentX || this.currentMouseY !== this.lastSentY) {
-                        window.commentatorSender.sendCommand({
-                            action: 'cursor-move',
-                            x: this.currentMouseX,
-                            y: this.currentMouseY,
-                            timestamp: Date.now()
-                        });
+                    window.commentatorSender.sendCommand({
+                        action: 'cursor-move',
+                        x: this.currentMouseX,
+                        y: this.currentMouseY,
+                        timestamp: Date.now()
+                    });
                         this.lastSentX = this.currentMouseX;
                         this.lastSentY = this.currentMouseY;
                     }
@@ -606,12 +606,12 @@ export class Canvas {
                 if (this.currentMouseX !== undefined && this.currentMouseY !== undefined) {
                     // Only send if coordinates have changed
                     if (this.currentMouseX !== this.lastSentX || this.currentMouseY !== this.lastSentY) {
-                        window.commentatorSender.sendCommand({
-                            action: 'cursor-move',
-                            x: this.currentMouseX,
-                            y: this.currentMouseY,
-                            timestamp: Date.now()
-                        });
+                    window.commentatorSender.sendCommand({
+                        action: 'cursor-move',
+                        x: this.currentMouseX,
+                        y: this.currentMouseY,
+                        timestamp: Date.now()
+                    });
                         this.lastSentX = this.currentMouseX;
                         this.lastSentY = this.currentMouseY;
                     }

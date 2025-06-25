@@ -1,3 +1,5 @@
+import { debug } from '../utils/debugger.js';
+
 export class UIManager {
     constructor(iframeManager) {
         this.iframeManager = iframeManager;
@@ -81,12 +83,44 @@ export class UIManager {
             });
         }
 
-        // Update shareable URL on input changes
-        ['VideoURL', 'StoneSize', 'ObsWebSocket', 'ObsVdoUrl'].forEach(id => {
+        // Update shareable URL on input changes and populate iframes
+        ['VideoURL', 'StoneSize', 'ObsWebSocket', 'ObsVdoUrl', 'ChatUrl'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('input', () => {
+                // Update URL
                 if (window.updateShareableUrl) {
                     window.updateShareableUrl();
+                }
+                
+                // Populate iframes based on input type
+                if (id === 'VideoURL') {
+                    const vdoLink = el.value.trim();
+                    if (vdoLink) {
+                        document.getElementById('feed').src = vdoLink;
+                    }
+                } else if (id === 'ObsVdoUrl') {
+                    const obsLink = el.value.trim();
+                    if (obsLink) {
+                        document.getElementById('obs').src = obsLink;
+                        // Update side panel visibility
+                        if (window.updateSidePanelVisibility) {
+                            window.updateSidePanelVisibility();
+                        }
+                        
+                        // Recreate data channel iframe with new room name
+                        if (this.iframeManager && this.iframeManager.setDataChannelUrl) {
+                            this.iframeManager.setDataChannelUrl(obsLink);
+                        }
+                    }
+                } else if (id === 'ChatUrl') {
+                    const chatUrl = el.value.trim();
+                    if (chatUrl) {
+                        document.getElementById('chat').src = chatUrl;
+                        // Update side panel visibility
+                        if (window.updateSidePanelVisibility) {
+                            window.updateSidePanelVisibility();
+                        }
+                    }
                 }
             });
         });
