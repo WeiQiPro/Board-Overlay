@@ -23,6 +23,65 @@ export class ViewerController {
         this.startCursorAnimation();
     }
     
+    // Seeded random number generator (LCG - Linear Congruential Generator)
+    seededRandom(seed) {
+        const a = 1664525;
+        const c = 1013904223;
+        const m = Math.pow(2, 32);
+        return () => {
+            seed = (a * seed + c) % m;
+            return seed / m;
+        };
+    }
+
+    // Create a hash from string for seeding
+    stringToSeed(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+        return Math.abs(hash);
+    }
+
+    // Generate UUID-like string with seed for consistent output
+    generateSeededUUID(seed) {
+        const rng = this.seededRandom(seed);
+        
+        // Generate 32 hex characters in UUID format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+        const hex = () => Math.floor(rng() * 16).toString(16);
+        const uuid = [
+            // 8 hex chars
+            hex() + hex() + hex() + hex() + hex() + hex() + hex() + hex(),
+            // 4 hex chars
+            hex() + hex() + hex() + hex(),
+            // 4 hex chars with version 4
+            '4' + hex() + hex() + hex(),
+            // 4 hex chars with variant bits
+            (8 + Math.floor(rng() * 4)).toString(16) + hex() + hex() + hex(),
+            // 12 hex chars
+            hex() + hex() + hex() + hex() + hex() + hex() + hex() + hex() + hex() + hex() + hex() + hex()
+        ].join('-');
+        
+        return uuid;
+    }
+
+    // Create data channel room name using seeded UUID (same as host)
+    createDataChannelRoomName(roomName) {
+        // Create seed from room name + date for daily uniqueness
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const seedString = `${roomName}-${today}`;
+        const seed = this.stringToSeed(seedString);
+        
+        // Generate consistent UUID-like identifier
+        const uuid = this.generateSeededUUID(seed);
+        const dataRoomName = `Baduk-${uuid}`;
+        
+        debug.log('🎥 Created data channel room name:', dataRoomName, 'from OBS room:', roomName, 'seed:', seed);
+        return dataRoomName;
+    }
+    
     setupVDOViewer() {
         // Get the room name from URL parameters
         const params = new URLSearchParams(window.location.search);
@@ -48,16 +107,24 @@ export class ViewerController {
             return;
         }
         
-        // Use existing OBS iframe for data communication
-        this.vdoFrame = document.getElementById('obs');
+        // Create unique data channel room name (same hash function as host)
+        const dataRoomName = this.createDataChannelRoomName(roomName);
         
-        if (!this.vdoFrame) {
-            debug.error('❌ OBS iframe not found in viewer mode');
-            return;
-        }
+        // Create invisible data channel iframe for host-viewer communication
+        const dataIframe = document.createElement("iframe");
+        dataIframe.src = `https://vdo.ninja/?view=${dataRoomName}&cleanoutput`;
+        dataIframe.style.width = "0px";
+        dataIframe.style.height = "0px";
+        dataIframe.style.position = "fixed";
+        dataIframe.style.left = "-100px";
+        dataIframe.style.top = "-100px";
+        dataIframe.id = "viewerDataChannelFrame";
+        document.body.appendChild(dataIframe);
+        this.vdoFrame = dataIframe;
         
-        debug.log('🎥 Using existing OBS iframe for data communication in room:', roomName);
-        debug.log('🎥 OBS iframe src:', this.vdoFrame.src);
+        debug.log('🎥 Created dedicated data channel iframe for viewer');
+        debug.log('🎥 Data channel room:', dataRoomName);
+        debug.log('🎥 Data iframe src:', this.vdoFrame.src);
         
         // Listen for messages
         this.setupMessageListener();
@@ -68,11 +135,8 @@ export class ViewerController {
             this.startViewerPing();
             debug.log('🎥 Viewer ping system started after connection delay');
             
-            // Request grid info after additional delay to ensure host is ready
-            setTimeout(() => {
-                this.requestGridInfo();
-                debug.log('🎥 Requested grid info after extended delay');
-            }, 2000);
+            // Grid coordinates will be sent automatically with stone placements
+            debug.log('🎥 Viewer ready - grid coordinates will be received with stone placements');
         }, 3000);
     }
     
@@ -149,6 +213,10 @@ export class ViewerController {
                 this.handleDrawing(command);
                 break;
                 
+            case 'draw-batch':
+                this.handleDrawingBatch(command);
+                break;
+                
             case 'add-mark':
                 this.addMark(command.type, command.x, command.y, command.text);
                 break;
@@ -201,6 +269,65 @@ export class ViewerController {
             }
             debug.log('✏️ Drawing action:', command.drawAction, 'at:', command.x, command.y);
         }
+    }
+
+    handleDrawingBatch(command) {
+        if (window.drawingLayer && command.points && command.points.length > 0) {
+            // Apply smooth interpolation between points for better visual quality
+            this.drawSmoothBatch(command.points, command.color);
+            debug.log(`🎨 Processed drawing batch with ${command.points.length} points`);
+        }
+    }
+
+    drawSmoothBatch(points, color) {
+        if (!window.drawingLayer || !window.drawingLayer.context || points.length === 0) return;
+        
+        const context = window.drawingLayer.context;
+        const originalColor = context.strokeStyle;
+        const originalLineWidth = context.lineWidth;
+        
+        // Set drawing properties
+        if (color) {
+            context.strokeStyle = color;
+        }
+        context.lineWidth = 2; // Ensure consistent line width
+        context.lineCap = 'round'; // Smooth line ends
+        context.lineJoin = 'round'; // Smooth line joins
+        
+        // If we only have one point, draw a small dot
+        if (points.length === 1) {
+            context.beginPath();
+            context.arc(points[0][0], points[0][1], 1, 0, 2 * Math.PI);
+            context.fill();
+            return;
+        }
+        
+        // Use quadratic curves for smooth interpolation between points
+        context.beginPath();
+        context.moveTo(points[0][0], points[0][1]);
+        
+        // For smoother curves, we'll use every point as a control point
+        for (let i = 1; i < points.length; i++) {
+            const currentPoint = points[i];
+            
+            if (i === points.length - 1) {
+                // Last point - draw straight line
+                context.lineTo(currentPoint[0], currentPoint[1]);
+            } else {
+                // Use next point to create smooth curve
+                const nextPoint = points[i + 1];
+                const controlX = (currentPoint[0] + nextPoint[0]) / 2;
+                const controlY = (currentPoint[1] + nextPoint[1]) / 2;
+                
+                context.quadraticCurveTo(currentPoint[0], currentPoint[1], controlX, controlY);
+            }
+        }
+        
+        context.stroke();
+        
+        // Restore original properties
+        context.strokeStyle = originalColor;
+        context.lineWidth = originalLineWidth;
     }
     
     clearDrawing() {
@@ -392,14 +519,14 @@ export class ViewerController {
             return;
         }
         
-        // Send ping to host every second
+        // Send ping to host every 30 seconds
         if (this.pingInterval) {
             clearInterval(this.pingInterval);
         }
         
         this.pingInterval = setInterval(() => {
             this.sendViewerPing();
-        }, 1000);
+        }, 30000); // Send ping every 30 seconds (half a minute)
         
         debug.log('🏓 Started viewer ping system');
     }
@@ -468,6 +595,13 @@ export class ViewerController {
     handleGridInfo(command) {
         debug.log('📐 Received current grid info from host:', command);
         
+        // Mark that we received a grid response
+        this.gridReceived = true;
+        if (this.gridRequestTimeout) {
+            clearTimeout(this.gridRequestTimeout);
+            this.gridRequestTimeout = null;
+        }
+        
         if (command.points && command.points.length === 4) {
             this.setGrid(command.points);
             debug.log('📐 Applied current grid from host');
@@ -496,20 +630,53 @@ export class ViewerController {
     }
     
     requestGridInfo() {
-        if (!this.vdoFrame || !this.connectionEstablished) return;
+        if (!this.vdoFrame || !this.connectionEstablished) {
+            debug.log('📐 Cannot request grid - no frame or connection not established');
+            return;
+        }
+        
+        const message = {
+            "sendData": JSON.stringify({
+                action: 'request-grid',
+                timestamp: Date.now()
+            }),
+            "type": "pcs"
+        };
         
         try {
-            this.vdoFrame.contentWindow.postMessage({
-                "sendData": JSON.stringify({
-                    action: 'request-grid',
-                    timestamp: Date.now()
-                }),
-                "type": "pcs"
-            }, '*');
-            
+            this.vdoFrame.contentWindow.postMessage(message, '*');
+            debug.log('📐 Sent grid request message:', message);
             debug.log('📐 Requested current grid info from host');
         } catch (error) {
             debug.error('❌ Failed to request grid info:', error);
         }
+    }
+    
+    requestGridInfoWithRetry() {
+        this.gridRequestAttempts = 0;
+        this.maxGridRequestAttempts = 5;
+        this.gridRequestInterval = 3000; // 3 seconds between attempts
+        
+        const attemptRequest = () => {
+            this.gridRequestAttempts++;
+            debug.log(`📐 Grid request attempt ${this.gridRequestAttempts}/${this.maxGridRequestAttempts}`);
+            
+            this.requestGridInfo();
+            
+            // Set up timeout to retry if no response received
+            if (this.gridRequestAttempts < this.maxGridRequestAttempts) {
+                this.gridRequestTimeout = setTimeout(() => {
+                    if (!this.gridReceived) {
+                        debug.log('📐 No grid response received, retrying...');
+                        attemptRequest();
+                    }
+                }, this.gridRequestInterval);
+            } else {
+                debug.log('📐 Max grid request attempts reached, giving up');
+            }
+        };
+        
+        this.gridReceived = false;
+        attemptRequest();
     }
 } 

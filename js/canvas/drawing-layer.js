@@ -9,6 +9,13 @@ export class DrawingLayer {
         this.marks = [];
         this.paths = [];  // Store drawing paths
         this.currentPath = null;
+        
+        // Drawing batch system for network optimization
+        this.drawingBatch = [];
+        this.batchInterval = null;
+        this.batchRate = 100; // Send batches every 100ms (10 times per second)
+        this.maxBatchSize = 20; // Maximum points per batch
+        
         this.initializeCanvas();
         this.bindEventListeners();
     }
@@ -70,10 +77,50 @@ export class DrawingLayer {
         this.context.strokeStyle = this.getPenColor();
         this.context.moveTo(x, y);
         
-        // Send to viewer if commentator sender is available
+        // Send start command immediately
         if (window.commentatorSender && !window.isViewerMode) {
             window.commentatorSender.sendDrawing('start', x, y, 'PEN');
         }
+        
+        // Start batching system for drawing points
+        this.startDrawingBatch();
+    }
+
+    startDrawingBatch() {
+        // Clear any existing batch
+        this.drawingBatch = [];
+        
+        // Clear any existing interval
+        if (this.batchInterval) {
+            clearInterval(this.batchInterval);
+        }
+        
+        // Start new batch interval
+        this.batchInterval = setInterval(() => {
+            this.sendDrawingBatch();
+        }, this.batchRate);
+    }
+
+    sendDrawingBatch() {
+        if (this.drawingBatch.length === 0) {
+            return;
+        }
+        
+        // Send batch of drawing points
+        if (window.commentatorSender && !window.isViewerMode) {
+            window.commentatorSender.sendCommand({
+                action: 'draw-batch',
+                points: [...this.drawingBatch], // Copy the array
+                tool: 'PEN',
+                color: this.getPenColor(),
+                timestamp: Date.now()
+            });
+            
+            debug.log(`🎨 Sent drawing batch with ${this.drawingBatch.length} points`);
+        }
+        
+        // Clear the batch
+        this.drawingBatch = [];
     }
 
     handleMouseMove(e) {
@@ -86,14 +133,23 @@ export class DrawingLayer {
             
             // Also ensure the cursor tracking interval is running
             if (!window.overlay.cursorSendInterval && window.commentatorSender && !window.isViewerMode) {
+                // Track last sent coordinates to avoid duplicates
+                window.overlay.lastSentX = undefined;
+                window.overlay.lastSentY = undefined;
+                
                 window.overlay.cursorSendInterval = setInterval(() => {
                     if (window.overlay.currentMouseX !== undefined && window.overlay.currentMouseY !== undefined) {
-                        window.commentatorSender.sendCommand({
-                            action: 'cursor-move',
-                            x: window.overlay.currentMouseX,
-                            y: window.overlay.currentMouseY,
-                            timestamp: Date.now()
-                        });
+                        // Only send if coordinates have changed
+                        if (window.overlay.currentMouseX !== window.overlay.lastSentX || window.overlay.currentMouseY !== window.overlay.lastSentY) {
+                            window.commentatorSender.sendCommand({
+                                action: 'cursor-move',
+                                x: window.overlay.currentMouseX,
+                                y: window.overlay.currentMouseY,
+                                timestamp: Date.now()
+                            });
+                            window.overlay.lastSentX = window.overlay.currentMouseX;
+                            window.overlay.lastSentY = window.overlay.currentMouseY;
+                        }
                     }
                 }, 50); // Exactly 20 times per second
             }
@@ -113,9 +169,12 @@ export class DrawingLayer {
         this.context.strokeStyle = this.getPenColor();
         this.context.stroke();
         
-        // Send to viewer if commentator sender is available
-        if (window.commentatorSender && !window.isViewerMode) {
-            window.commentatorSender.sendDrawing('draw', x, y, 'PEN');
+        // Add point to batch instead of sending immediately
+        this.drawingBatch.push([x, y]);
+        
+        // If batch is getting too large, send it immediately
+        if (this.drawingBatch.length >= this.maxBatchSize) {
+            this.sendDrawingBatch();
         }
     }
 
@@ -124,7 +183,16 @@ export class DrawingLayer {
             this.paths.push(this.currentPath);
             this.currentPath = null;
             
-            // Send to viewer if commentator sender is available
+            // Send any remaining points in the batch
+            this.sendDrawingBatch();
+            
+            // Stop the batching interval
+            if (this.batchInterval) {
+                clearInterval(this.batchInterval);
+                this.batchInterval = null;
+            }
+            
+            // Send end command
             if (window.commentatorSender && !window.isViewerMode) {
                 window.commentatorSender.sendDrawing('end', 0, 0, 'PEN');
             }
@@ -138,10 +206,26 @@ export class DrawingLayer {
         this.paths = [];
         this.currentPath = null;
         
+        // Clean up batch system
+        if (this.batchInterval) {
+            clearInterval(this.batchInterval);
+            this.batchInterval = null;
+        }
+        this.drawingBatch = [];
+        
         // Send to viewer if commentator sender is available
         if (window.commentatorSender && !window.isViewerMode) {
             window.commentatorSender.sendClear();
         }
+    }
+
+    // Cleanup method for when the drawing layer is destroyed
+    destroy() {
+        if (this.batchInterval) {
+            clearInterval(this.batchInterval);
+            this.batchInterval = null;
+        }
+        this.drawingBatch = [];
     }
 
     addMark(type, x, y, text = '') {
@@ -232,14 +316,23 @@ export class DrawingLayer {
     handleMouseEnter(e) {
         // Restart cursor tracking when mouse enters drawing layer
         if (!window.overlay.cursorSendInterval && window.commentatorSender && !window.isViewerMode) {
+            // Reset last sent coordinates when re-entering
+            window.overlay.lastSentX = undefined;
+            window.overlay.lastSentY = undefined;
+            
             window.overlay.cursorSendInterval = setInterval(() => {
                 if (window.overlay.currentMouseX !== undefined && window.overlay.currentMouseY !== undefined) {
-                    window.commentatorSender.sendCommand({
-                        action: 'cursor-move',
-                        x: window.overlay.currentMouseX,
-                        y: window.overlay.currentMouseY,
-                        timestamp: Date.now()
-                    });
+                    // Only send if coordinates have changed
+                    if (window.overlay.currentMouseX !== window.overlay.lastSentX || window.overlay.currentMouseY !== window.overlay.lastSentY) {
+                        window.commentatorSender.sendCommand({
+                            action: 'cursor-move',
+                            x: window.overlay.currentMouseX,
+                            y: window.overlay.currentMouseY,
+                            timestamp: Date.now()
+                        });
+                        window.overlay.lastSentX = window.overlay.currentMouseX;
+                        window.overlay.lastSentY = window.overlay.currentMouseY;
+                    }
                 }
             }, 50); // Exactly 20 times per second
         }

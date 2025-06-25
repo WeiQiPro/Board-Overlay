@@ -529,6 +529,12 @@ export class Canvas {
                     // Send to viewer if commentator sender is available
                     if (window.commentatorSender && !window.isViewerMode) {
                         window.commentatorSender.sendStone(point[0], point[1], stoneToPlace);
+                        
+                        // Also send current grid coordinates with each stone placement
+                        if (this.points && this.points.length === 4) {
+                            window.commentatorSender.sendGridCoordinates(this.points);
+                            debug.log('📐 Sent grid coordinates with stone placement:', this.points);
+                        }
                     }
                 }
                 
@@ -557,14 +563,23 @@ export class Canvas {
         
         // Initialize cursor sending interval if not already running
         if (!this.cursorSendInterval && window.commentatorSender && !window.isViewerMode) {
+            // Track last sent coordinates to avoid duplicates
+            this.lastSentX = undefined;
+            this.lastSentY = undefined;
+            
             this.cursorSendInterval = setInterval(() => {
                 if (this.currentMouseX !== undefined && this.currentMouseY !== undefined) {
-                    window.commentatorSender.sendCommand({
-                        action: 'cursor-move',
-                        x: this.currentMouseX,
-                        y: this.currentMouseY,
-                        timestamp: Date.now()
-                    });
+                    // Only send if coordinates have changed
+                    if (this.currentMouseX !== this.lastSentX || this.currentMouseY !== this.lastSentY) {
+                        window.commentatorSender.sendCommand({
+                            action: 'cursor-move',
+                            x: this.currentMouseX,
+                            y: this.currentMouseY,
+                            timestamp: Date.now()
+                        });
+                        this.lastSentX = this.currentMouseX;
+                        this.lastSentY = this.currentMouseY;
+                    }
                 }
             }, 50); // Exactly 20 times per second
                 }
@@ -583,14 +598,23 @@ export class Canvas {
     handleMouseEnter(event) {
         // Restart cursor tracking when mouse re-enters canvas
         if (!this.cursorSendInterval && window.commentatorSender && !window.isViewerMode) {
+            // Reset last sent coordinates when re-entering
+            this.lastSentX = undefined;
+            this.lastSentY = undefined;
+            
             this.cursorSendInterval = setInterval(() => {
                 if (this.currentMouseX !== undefined && this.currentMouseY !== undefined) {
-                    window.commentatorSender.sendCommand({
-                        action: 'cursor-move',
-                        x: this.currentMouseX,
-                        y: this.currentMouseY,
-                        timestamp: Date.now()
-                    });
+                    // Only send if coordinates have changed
+                    if (this.currentMouseX !== this.lastSentX || this.currentMouseY !== this.lastSentY) {
+                        window.commentatorSender.sendCommand({
+                            action: 'cursor-move',
+                            x: this.currentMouseX,
+                            y: this.currentMouseY,
+                            timestamp: Date.now()
+                        });
+                        this.lastSentX = this.currentMouseX;
+                        this.lastSentY = this.currentMouseY;
+                    }
                 }
             }, 50); // Exactly 20 times per second
         }
