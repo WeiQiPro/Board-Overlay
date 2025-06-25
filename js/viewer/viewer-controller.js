@@ -12,6 +12,11 @@ export class ViewerController {
         this.currentX = 0;
         this.currentY = 0;
         this.lerpSpeed = 0.3; // Adjust for smoothness (0.1 = very smooth, 0.5 = responsive)
+        // Ping system
+        this.pingInterval = null;
+        this.lastHostPingTime = 0;
+        this.hostPingTimes = [];
+        this.connectionEstablished = false;
         debug.log('🎥 ViewerController initialized');
         this.setupVDOViewer();
         this.setupCursorDisplay();
@@ -19,7 +24,7 @@ export class ViewerController {
     }
     
     setupVDOViewer() {
-        // Get the OBS URL from URL parameters (this is the P2P communication channel)
+        // Get the room name from URL parameters
         const params = new URLSearchParams(window.location.search);
         let obsUrl = params.get('obs');
         
@@ -28,29 +33,45 @@ export class ViewerController {
             return;
         }
         
-        // Decode the URL
+        // Decode the URL to extract room name
         obsUrl = decodeURIComponent(obsUrl);
         if (obsUrl.includes('%')) {
             obsUrl = decodeURIComponent(obsUrl);
         }
         
-        debug.log('🎥 Creating VDO viewer iframe with OBS URL:', obsUrl);
+        // Extract room name from the obs URL
+        const obsParams = new URLSearchParams(obsUrl.split('?')[1] || '');
+        const roomName = obsParams.get('view') || obsParams.get('push');
         
-        // Create hidden VDO Ninja iframe
+        if (!roomName) {
+            debug.error('❌ No room name found in OBS URL');
+            return;
+        }
+        
+        // Create clean dedicated iframe for data communication (like VDO drawing tool)
         const iframe = document.createElement("iframe");
-        iframe.src = obsUrl + '&cleanoutput';
+        iframe.src = `https://vdo.ninja/?view=${roomName}&cleanoutput`;
         iframe.style.width = "0px";
         iframe.style.height = "0px";
         iframe.style.position = "fixed";
         iframe.style.left = "-100px";
         iframe.style.top = "-100px";
-        iframe.id = "viewerVDOFrame";
-        
+        iframe.id = "dataChannelViewerFrame";
         document.body.appendChild(iframe);
         this.vdoFrame = iframe;
         
+        debug.log('🎥 Created clean data channel viewer iframe for room:', roomName);
+        debug.log('🎥 Data channel iframe src:', this.vdoFrame.src);
+        
         // Listen for messages
         this.setupMessageListener();
+        
+        // Start viewer ping after connection is established
+        setTimeout(() => {
+            this.connectionEstablished = true;
+            this.startViewerPing();
+            debug.log('🎥 Viewer ping system started after connection delay');
+        }, 3000);
     }
     
     setupMessageListener() {
@@ -59,16 +80,39 @@ export class ViewerController {
         const messageEvent = eventMethod === "attachEvent" ? "onmessage" : "message";
         
         eventer(messageEvent, (e) => {
-            if (e.source !== this.vdoFrame.contentWindow) return;
+            // Log ALL messages for debugging
+            debug.log('🎥 Raw message received:', {
+                origin: e.origin,
+                source: e.source === this.vdoFrame?.contentWindow ? 'VDO_FRAME' : 'OTHER',
+                data: e.data,
+                hasDataReceived: "dataReceived" in e.data,
+                dataType: typeof e.data,
+                keys: Object.keys(e.data || {})
+            });
+            
+            if (e.source !== this.vdoFrame.contentWindow) {
+                debug.log('🎥 Message ignored - not from VDO frame');
+                return;
+            }
+            
+            // Check for data channel connection status
+            if (e.data && e.data.action) {
+                if (e.data.action === 'requested-stream' || e.data.action.includes('connection')) {
+                    debug.log('🔗 Connection status message:', e.data);
+                }
+            }
             
             if ("dataReceived" in e.data) {
+                debug.log('🎥 DataReceived found:', e.data.dataReceived);
                 try {
                     const command = JSON.parse(e.data.dataReceived);
                     debug.log('🎥 Received command:', command);
                     this.processCommand(command);
                 } catch (error) {
-                    debug.log('🎥 Non-command data received:', e.data.dataReceived);
+                    debug.log('🎥 Non-JSON data received:', e.data.dataReceived);
                 }
+            } else {
+                debug.log('🎥 Message without dataReceived:', e.data);
             }
         });
         
@@ -79,6 +123,18 @@ export class ViewerController {
         debug.log('🎯 Processing command:', command);
         
         switch (command.action) {
+            case 'host-ping':
+                this.handleHostPing(command);
+                break;
+                
+            case 'viewer-ping-response':
+                this.handleViewerPingResponse(command);
+                break;
+                
+            case 'set-grid':
+                this.setGrid(command.points);
+                break;
+                
             case 'place-stone':
                 this.placeStone(command.x, command.y, command.color);
                 break;
@@ -320,6 +376,105 @@ export class ViewerController {
             // Position the cursor element relative to the page
             this.cursorElement.style.left = pageX + 'px';
             this.cursorElement.style.top = pageY + 'px';
+        }
+    }
+    
+    startViewerPing() {
+        // Only start if connection is established
+        if (!this.connectionEstablished) {
+            debug.log('🏓 Waiting for connection before starting viewer ping');
+            return;
+        }
+        
+        // Send ping to host every second
+        if (this.pingInterval) {
+            clearInterval(this.pingInterval);
+        }
+        
+        this.pingInterval = setInterval(() => {
+            this.sendViewerPing();
+        }, 1000);
+        
+        debug.log('🏓 Started viewer ping system');
+    }
+    
+    stopViewerPing() {
+        if (this.pingInterval) {
+            clearInterval(this.pingInterval);
+            this.pingInterval = null;
+        }
+        debug.log('🏓 Stopped viewer ping system');
+    }
+    
+    sendViewerPing() {
+        if (!this.vdoFrame || !this.connectionEstablished) return;
+        
+        const timestamp = Date.now();
+        try {
+            this.vdoFrame.contentWindow.postMessage({
+                "sendData": JSON.stringify({
+                    action: 'viewer-ping',
+                    timestamp: timestamp
+                }),
+                "type": "pcs"
+            }, '*');
+            
+            debug.log('🏓 Sent viewer ping:', timestamp);
+        } catch (error) {
+            debug.error('❌ Failed to send viewer ping:', error);
+        }
+    }
+    
+    handleHostPing(message) {
+        const responseTime = Date.now() - message.timestamp;
+        this.hostPingTimes.push(responseTime);
+        
+        // Keep only last 10 ping times
+        if (this.hostPingTimes.length > 10) {
+            this.hostPingTimes.shift();
+        }
+        
+        const avgResponseTime = this.hostPingTimes.reduce((a, b) => a + b, 0) / this.hostPingTimes.length;
+        debug.log(`🏓 Host ping received: ${responseTime}ms delay (avg: ${Math.round(avgResponseTime)}ms)`);
+        
+        // Send ping response back to host
+        try {
+            this.vdoFrame.contentWindow.postMessage({
+                "sendData": JSON.stringify({
+                    action: 'ping-response',
+                    originalTimestamp: message.timestamp,
+                    responseTimestamp: Date.now()
+                }),
+                "type": "pcs"
+            }, '*');
+            
+            debug.log('🏓 Sent ping response to host');
+        } catch (error) {
+            debug.error('❌ Failed to send ping response:', error);
+        }
+    }
+    
+    handleViewerPingResponse(message) {
+        const responseTime = Date.now() - message.originalTimestamp;
+        debug.log(`🏓 Host ping response received: ${responseTime}ms total round-trip`);
+    }
+    
+    setGrid(points) {
+        if (window.overlay && points && points.length === 4) {
+            window.overlay.points = points;
+            window.overlay.grid = window.overlay.generateGrid(points);
+            window.overlay.isGridSet = true;
+            debug.log('📐 Grid coordinates set:', points);
+            
+            // Show grid briefly to confirm it was received
+            const wasVisible = window.overlay.show;
+            window.overlay.show = true;
+            window.overlay.updateGridButtonState();
+            
+            setTimeout(() => {
+                window.overlay.show = wasVisible;
+                window.overlay.updateGridButtonState();
+            }, 2000);
         }
     }
 } 

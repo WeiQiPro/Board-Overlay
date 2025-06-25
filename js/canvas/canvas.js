@@ -408,6 +408,12 @@ export class Canvas {
                 if (window.updateShareableUrl) {
                     window.updateShareableUrl();
                 }
+                
+                // Send grid coordinates to viewers
+                if (window.commentatorSender && !window.isViewerMode) {
+                    window.commentatorSender.sendGridCoordinates(this.points);
+                    debug.log('📐 Sent grid coordinates to viewers:', this.points);
+                }
             }
         } else if (this.isGridSet) {
             let point = this.findClosestPoint(cx, cy, this.grid);

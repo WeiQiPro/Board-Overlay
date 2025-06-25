@@ -90,6 +90,9 @@ function loadConfigFromUrl() {
         if (decodedObsLink.includes('%')) {
             decodedObsLink = decodeURIComponent(decodedObsLink);
         }
+        
+        // Don't modify the host OBS URL - leave it as is
+        
         const obsVdoUrlInput = document.getElementById('ObsVdoUrl');
         const obsElement = document.getElementById('obs');
         if (obsVdoUrlInput) obsVdoUrlInput.value = decodedObsLink;
@@ -162,9 +165,26 @@ function updateSidePanelVisibility() {
 function setupViewerMode() {
     debug.log('🎥 Setting up viewer mode');
     
-    // Set green background for chroma keying
-    document.body.style.backgroundColor = '#00ff00';
-    document.querySelector('.page-container').style.backgroundColor = '#00ff00';
+    // Set everything transparent for OBS
+    document.body.style.backgroundColor = 'transparent';
+    document.body.style.background = 'transparent';
+    document.documentElement.style.backgroundColor = 'transparent';
+    document.documentElement.style.background = 'transparent';
+    
+    // Make sure all major containers are transparent
+    const containers = [
+        '.page-container',
+        '.content-area', 
+        '.main-feed'
+    ];
+    
+    containers.forEach(selector => {
+        const element = document.querySelector(selector);
+        if (element) {
+            element.style.backgroundColor = 'transparent';
+            element.style.background = 'transparent';
+        }
+    });
     
     // Hide all UI elements except the main feed
     const elementsToHide = [
@@ -172,7 +192,8 @@ function setupViewerMode() {
         '.SidePanel',
         '.config-panel',
         '.OBS_Controls',
-        '.Chat'
+        '.Chat',
+        '.footer'
     ];
     
     elementsToHide.forEach(selector => {
@@ -182,16 +203,12 @@ function setupViewerMode() {
         }
     });
     
-    // Make main feed full screen but keep aspect ratio for canvas dimensions
+    // Keep main feed the same size as host's feed iframe for coordinate alignment
     const mainFeed = document.querySelector('.main-feed');
     if (mainFeed) {
-        mainFeed.style.position = 'fixed';
-        mainFeed.style.top = '0';
-        mainFeed.style.left = '0';
-        mainFeed.style.width = '100vw';
-        mainFeed.style.height = '100vh';
-        mainFeed.style.margin = '0';
-        mainFeed.style.zIndex = '1000';
+        // Don't change size - keep it exactly as it would be on host
+        mainFeed.style.backgroundColor = 'transparent';
+        mainFeed.style.background = 'transparent';
     }
     
     // Hide the video feed iframe but keep it for dimensions
@@ -201,6 +218,20 @@ function setupViewerMode() {
         feedIframe.style.pointerEvents = 'none';
     }
     
+    // Add CSS override for complete transparency
+    const style = document.createElement('style');
+    style.textContent = `
+        * {
+            background: transparent !important;
+            background-color: transparent !important;
+        }
+        html, body, .page-container, .content-area, .main-feed {
+            background: transparent !important;
+            background-color: transparent !important;
+        }
+    `;
+    document.head.appendChild(style);
+    
     debug.log('🎥 Viewer mode UI setup complete');
 }
 
@@ -208,12 +239,34 @@ function generateViewerUrl() {
     const baseUrl = window.location.origin + window.location.pathname;
     const currentUrl = new URL(window.location);
     
-    // Copy all current parameters except add viewer=yes
+    // Create viewer URL with viewer=yes and obs= parameters
     const viewerUrl = new URL(baseUrl);
     
-    // Copy existing parameters (grid, vdo, obs, etc.) but modify VDO links
+    // Add viewer=yes parameter first
+    viewerUrl.searchParams.set('viewer', 'yes');
+    
+    // Get the OBS URL and create clean viewer URL with only view=roomname&datamode
+    const obsUrl = currentUrl.searchParams.get('obs');
+    if (obsUrl) {
+        let decodedObsLink = decodeURIComponent(obsUrl);
+        if (decodedObsLink.includes('%')) {
+            decodedObsLink = decodeURIComponent(decodedObsLink);
+        }
+        
+        // Extract room name from host URL
+        const obsParams = new URLSearchParams(decodedObsLink.split('?')[1] || '');
+        const roomName = obsParams.get('push') || obsParams.get('view');
+        
+        if (roomName) {
+            // Create clean viewer URL with ONLY view=roomname&datamode
+            const cleanViewerUrl = `https://vdo.ninja/?view=${roomName}&datamode`;
+            viewerUrl.searchParams.set('obs', encodeURIComponent(encodeURIComponent(cleanViewerUrl)));
+        }
+    }
+    
+    // Copy other parameters (grid, vdo, etc.) but modify VDO links
     for (const [key, value] of currentUrl.searchParams) {
-        if (key !== 'viewer') { // Don't copy existing viewer param
+        if (key !== 'viewer' && key !== 'obs') { // Don't copy viewer or obs since we handled them above
             if (key === 'vdo') {
                 // Modify VDO Ninja links to change push= to view=
                 let decodedVdoLink = decodeURIComponent(value);
@@ -224,34 +277,11 @@ function generateViewerUrl() {
                 // Replace push= with view= in the VDO link
                 const modifiedVdoLink = decodedVdoLink.replace(/push=([^&]+)/, 'view=$1');
                 viewerUrl.searchParams.set(key, encodeURIComponent(encodeURIComponent(modifiedVdoLink)));
-            } else if (key === 'obs') {
-                // For OBS link, simplify to only include view= and &datamode
-                let decodedObsLink = decodeURIComponent(value);
-                if (decodedObsLink.includes('%')) {
-                    decodedObsLink = decodeURIComponent(decodedObsLink);
-                }
-                
-                // Extract the room name from push= or view= parameter
-                const obsParams = new URLSearchParams(decodedObsLink.split('?')[1] || '');
-                const roomName = obsParams.get('push') || obsParams.get('view');
-                
-                if (roomName) {
-                    // Create simplified OBS URL with only view= parameter
-                    const baseObsUrl = decodedObsLink.split('?')[0] || 'https://vdo.ninja/';
-                    const simplifiedObsLink = `${baseObsUrl}?view=${roomName}`;
-                    viewerUrl.searchParams.set(key, encodeURIComponent(encodeURIComponent(simplifiedObsLink)));
-                } else {
-                    // Fallback to original if we can't extract room name
-                    viewerUrl.searchParams.set(key, value);
-                }
             } else {
                 viewerUrl.searchParams.set(key, value);
             }
         }
     }
-    
-    // Add viewer=yes parameter
-    viewerUrl.searchParams.set('viewer', 'yes');
     
     debug.log('Generated viewer URL:', viewerUrl.toString());
     return viewerUrl.toString();
