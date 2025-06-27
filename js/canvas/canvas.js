@@ -98,6 +98,20 @@ export class Canvas {
         });
     }
 
+    switchCurrentColor() {
+        this.currentColor = this.currentColor === "BLACK" ? "WHITE" : "BLACK";
+        debug.log('🎨 Switched current color to:', this.currentColor);
+        
+        // Send to viewer if commentator sender is available
+        if (window.commentatorSender && !window.isViewerMode) {
+            window.commentatorSender.sendCommand({
+                action: 'switch-color',
+                color: this.currentColor,
+                timestamp: Date.now()
+            });
+        }
+    }
+
     initializeCanvas() {
         this.canvas.width = CONST.CANVAS.WIDTH;
         this.canvas.height = CONST.CANVAS.HEIGHT;
@@ -639,6 +653,9 @@ export class Canvas {
         // Note: Spacebar handling is now done in main.js to avoid duplicate events
         if (event.code === "KeyR") {
             this.resetGrid();
+            event.preventDefault();
+        } else if (event.code === "KeyQ") {
+            this.switchCurrentColor();
             event.preventDefault();
         }
     }

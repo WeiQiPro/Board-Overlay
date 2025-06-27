@@ -257,23 +257,10 @@ function generateViewerUrl() {
         const roomName = obsParams.get('push') || obsParams.get('view');
         
         if (roomName) {
-            // Create clean viewer URL with ONLY view=roomname&datamode
-            const cleanViewerUrl = `https://vdo.ninja/?view=${roomName}&datamode`;
+            // Create clean viewer URL with ONLY view=roomname&dataonly
+            const cleanViewerUrl = `https://vdo.ninja/?view=${roomName}&dataonly`;
             viewerUrl.searchParams.set('obs', encodeURIComponent(encodeURIComponent(cleanViewerUrl)));
         }
-    }
-    
-    // Add chat URL from input field
-    const chatUrlInput = document.getElementById('ChatUrl');
-    if (chatUrlInput && chatUrlInput.value.trim()) {
-        const chatUrl = chatUrlInput.value.trim();
-        viewerUrl.searchParams.set('chat_url', encodeURIComponent(chatUrl));
-    }
-    
-    // Add grid coordinates if available
-    if (window.overlay && window.overlay.points && window.overlay.points.length === 4) {
-        const gridCoords = window.overlay.points.map(pt => pt.map(Number).map(n => Math.round(n)).join(',')).join(';');
-        viewerUrl.searchParams.set('grid', gridCoords);
     }
     
     debug.log('Generated viewer URL:', viewerUrl.toString());

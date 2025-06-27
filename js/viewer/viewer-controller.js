@@ -245,6 +245,10 @@ export class ViewerController {
                 this.updateCursor(command.x, command.y);
                 break;
                 
+            case 'switch-color':
+                this.switchCurrentColor(command.color);
+                break;
+                
             default:
                 debug.log('🤷 Unknown command:', command.action);
                 break;
@@ -395,9 +399,10 @@ export class ViewerController {
     
     toggleGrid(visible) {
         if (window.overlay) {
-            window.overlay.show = visible;
+            // In viewer mode, permanently disable grid visibility
+            window.overlay.show = false;
             window.overlay.updateGridButtonState();
-            debug.log('👁️ Grid visibility:', visible);
+            debug.log('👁️ Grid permanently disabled in viewer mode');
         }
     }
     
@@ -699,5 +704,12 @@ export class ViewerController {
         
         this.gridReceived = false;
         attemptRequest();
+    }
+    
+    switchCurrentColor(color) {
+        if (window.overlay) {
+            window.overlay.currentColor = color;
+            debug.log('🎨 Switched current color to:', color);
+        }
     }
 } 
