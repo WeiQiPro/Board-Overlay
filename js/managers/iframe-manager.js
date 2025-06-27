@@ -20,7 +20,8 @@ export class IframeManager {
         if (params.has('vdo_link')) {
             const vdoLink = params.get('vdo_link');
             if (vdoLink) {
-                this.setUrl('feed', vdoLink);
+                const processedUrl = this.ensureFeedAudioSettings(vdoLink);
+                this.setUrl('feed', processedUrl);
                 document.title = vdoLink;
             }
         }
@@ -45,7 +46,9 @@ export class IframeManager {
                 decodedVdoLink = decodeURIComponent(decodedVdoLink);
             }
             document.getElementById('VideoURL').value = decodedVdoLink;
-            document.getElementById('feed').src = decodedVdoLink;
+            // Use ensureFeedAudioSettings to handle noaudio parameter
+            const processedUrl = this.ensureFeedAudioSettings(decodedVdoLink);
+            document.getElementById('feed').src = processedUrl;
         }
     }
 
@@ -56,10 +59,36 @@ export class IframeManager {
 
     setUrl(type, url) {
         if (this.iframes[type]) {
+            // Special handling for feed iframe to check for noaudio parameter
+            if (type === 'feed') {
+                url = this.ensureFeedAudioSettings(url);
+            }
+            
             this.iframes[type].src = url;
             if (window.updateSidePanelVisibility) {
                 window.updateSidePanelVisibility();
             }
+        }
+    }
+
+    ensureFeedAudioSettings(url) {
+        try {
+            const urlObj = new URL(url);
+            
+            // Check if &noaudio is in the URL
+            if (url.includes('&noaudio') || urlObj.searchParams.has('noaudio')) {
+                // Ensure noaudio parameter is present
+                urlObj.searchParams.set('noaudio', '');
+                // Also add mute parameter for extra safety
+                urlObj.searchParams.set('mute', '1');
+                debug.log('🔇 Feed URL contains noaudio - ensuring muted:', urlObj.toString());
+            }
+            
+            return urlObj.toString();
+        } catch (error) {
+            // If URL parsing fails, return original URL
+            debug.error('❌ Failed to parse feed URL for audio settings:', error);
+            return url;
         }
     }
 

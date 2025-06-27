@@ -49,7 +49,13 @@ export class UIManager {
             videoBtn.addEventListener('click', () => {
                 const vdoLink = document.getElementById('VideoURL').value.trim();
                 if (vdoLink) {
-                    document.getElementById('feed').src = vdoLink;
+                    // Use iframe manager to ensure proper audio settings
+                    if (this.iframeManager && this.iframeManager.ensureFeedAudioSettings) {
+                        const processedUrl = this.iframeManager.ensureFeedAudioSettings(vdoLink);
+                        document.getElementById('feed').src = processedUrl;
+                    } else {
+                        document.getElementById('feed').src = vdoLink;
+                    }
                     if (window.updateShareableUrl) {
                         window.updateShareableUrl();
                     }
@@ -96,7 +102,13 @@ export class UIManager {
                 if (id === 'VideoURL') {
                     const vdoLink = el.value.trim();
                     if (vdoLink) {
-                        document.getElementById('feed').src = vdoLink;
+                        // Use iframe manager to ensure proper audio settings
+                        if (this.iframeManager && this.iframeManager.ensureFeedAudioSettings) {
+                            const processedUrl = this.iframeManager.ensureFeedAudioSettings(vdoLink);
+                            document.getElementById('feed').src = processedUrl;
+                        } else {
+                            document.getElementById('feed').src = vdoLink;
+                        }
                     }
                 } else if (id === 'ObsVdoUrl') {
                     const obsLink = el.value.trim();

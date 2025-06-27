@@ -359,66 +359,6 @@ body, html {
     height: 32px;
 }
 
-/* Tooltip styles */
-[title] {
-    position: relative;
-}
-
-[title]:hover::after {
-    content: attr(title);
-    position: fixed;
-    top: 50px; /* Position below the top bar (40px height + 10px padding) */
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: rgba(0, 0, 0, 0.95);
-    color: white;
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-size: 12px;
-    white-space: nowrap;
-    z-index: 100000;
-    pointer-events: none;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-}
-
-[title]:hover::before {
-    content: "";
-    position: fixed;
-    width: 0;
-    height: 0;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-bottom: 5px solid rgba(0, 0, 0, 0.95); /* Changed to point upward */
-    top: 45px; /* Position arrow just below the top bar */
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 100000;
-    pointer-events: none;
-}
-
-/* Adjust edge cases */
-.setting-item:last-child [title]:hover::after {
-    left: auto;
-    right: 10px;
-    transform: none;
-}
-
-.setting-item:first-child [title]:hover::after {
-    left: 10px;
-    transform: none;
-}
-
-.setting-item:last-child [title]:hover::before {
-    left: auto;
-    right: 15px;
-    transform: none;
-}
-
-.setting-item:first-child [title]:hover::before {
-    left: 15px;
-    transform: none;
-}
-
 /* Add custom scrollbar styling */
 .top-bar::-webkit-scrollbar {
     height: 6px;
