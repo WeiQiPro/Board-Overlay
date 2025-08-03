@@ -90,7 +90,7 @@ export class UIManager {
         }
 
         // Update shareable URL on input changes and populate iframes
-        ['VideoURL', 'StoneSize', 'ObsWebSocket', 'ObsVdoUrl', 'ChatUrl'].forEach(id => {
+        ['VideoURL', 'StoneSize', 'ObsWebSocket', 'ObsVdoUrl', 'ChatUrl', 'coordinateColor'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('input', () => {
                 // Update URL
@@ -132,6 +132,16 @@ export class UIManager {
                         if (window.updateSidePanelVisibility) {
                             window.updateSidePanelVisibility();
                         }
+                    }
+                } else if (id === 'coordinateColor') {
+                    // Send coordinate color change to viewer
+                    if (window.commentatorSender && !window.isViewerMode) {
+                        window.commentatorSender.sendCommand({
+                            action: 'coordinate-color',
+                            color: el.value,
+                            timestamp: Date.now()
+                        });
+                        debug.log('🎨 Sent coordinate color to viewer:', el.value);
                     }
                 }
             });

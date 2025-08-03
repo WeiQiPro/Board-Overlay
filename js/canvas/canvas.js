@@ -113,12 +113,33 @@ export class Canvas {
     }
 
     initializeCanvas() {
-        this.canvas.width = CONST.CANVAS.WIDTH;
-        this.canvas.height = CONST.CANVAS.HEIGHT;
+        // Set canvas dimensions based on mode
+        if (window.isViewerMode) {
+            // Viewer mode: 1920x1080 for OBS overlay
+            this.canvas.width = 1920;
+            this.canvas.height = 1080;
+        } else {
+            // Main page: 1280x720 for commentary
+            this.canvas.width = 1280;
+            this.canvas.height = 720;
+        }
         
         // Make canvas focusable for keyboard shortcuts
         this.canvas.tabIndex = 0;
         this.canvas.style.outline = 'none'; // Remove focus outline
+    }
+
+    updateCanvasDimensions() {
+        // Update canvas dimensions based on current mode
+        if (window.isViewerMode) {
+            // Viewer mode: 1920x1080 for OBS overlay
+            this.canvas.width = 1920;
+            this.canvas.height = 1080;
+        } else {
+            // Main page: 1280x720 for commentary
+            this.canvas.width = 1280;
+            this.canvas.height = 720;
+        }
     }
 
     bindEventListeners() {
@@ -174,7 +195,13 @@ export class Canvas {
         const gridBtn = document.getElementById("GridBtn");
         if (gridBtn) {
             gridBtn.addEventListener("click", () => {
-                this.show = !this.show;
+                // In viewer mode, grid dots are always disabled
+                if (window.isViewerMode) {
+                    this.show = false;
+                    debug.log('👁️ Grid dots disabled in viewer mode');
+                } else {
+                    this.show = !this.show;
+                }
                 this.updateGridButtonState();
                 
                 // Send to viewer if commentator sender is available
@@ -186,6 +213,11 @@ export class Canvas {
         const coordBtn = document.getElementById("CoordBtn");
         if (coordBtn) {
             coordBtn.addEventListener("click", () => {
+                // In viewer mode, coordinates are always on and cannot be toggled
+                if (window.isViewerMode) {
+                    debug.log('👁️ Coordinates permanently enabled in viewer mode');
+                    return;
+                }
                 this.showCoordinates = !this.showCoordinates;
             });
         }
@@ -196,14 +228,35 @@ export class Canvas {
         // Use SVG icons for grid on/off
         const gridOnIcon = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="16" height="16" rx="2" stroke="white" stroke-width="2"/><path d="M2 7H18" stroke="white" stroke-width="2"/><path d="M2 13H18" stroke="white" stroke-width="2"/><path d="M7 2V18" stroke="white" stroke-width="2"/><path d="M13 2V18" stroke="white" stroke-width="2"/></svg>`;
         const gridOffIcon = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="16" height="16" rx="2" stroke="#666" stroke-width="2"/><path d="M2 7H18" stroke="#666" stroke-width="2"/><path d="M2 13H18" stroke="#666" stroke-width="2"/><path d="M7 2V18" stroke="#666" stroke-width="2"/><path d="M13 2V18" stroke="#666" stroke-width="2"/></svg>`;
-        if (this.show) {
+        
+        // In viewer mode, always show grid as off (even though coordinates may be visible)
+        const effectiveShow = window.isViewerMode ? false : this.show;
+        
+        if (effectiveShow) {
             this.gridElement.classList.add('active');
             this.gridElement.innerHTML = gridOnIcon;
         } else {
             this.gridElement.classList.remove('active');
             this.gridElement.innerHTML = gridOffIcon;
         }
-        this.gridElement.dataset.show = this.show.toString();
+        this.gridElement.dataset.show = effectiveShow.toString();
+        
+        // Also update coordinate button state
+        this.updateCoordinateButtonState();
+    }
+    
+    updateCoordinateButtonState() {
+        const coordBtn = document.getElementById("CoordBtn");
+        if (!coordBtn) return;
+        
+        // In viewer mode, always show coordinates as on
+        const effectiveShowCoordinates = window.isViewerMode ? true : this.showCoordinates;
+        
+        if (effectiveShowCoordinates) {
+            coordBtn.classList.add('active');
+        } else {
+            coordBtn.classList.remove('active');
+        }
     }
 
     tick() {
@@ -225,8 +278,8 @@ export class Canvas {
 
     drawGrid() {
         if (this.grid && this.grid.length > 0) {
-            // Draw grid points only if show is true
-            if (this.show) {
+            // Draw grid points only if show is true AND not in viewer mode
+            if (this.show && !window.isViewerMode) {
                 for (let i = 0; i < this.grid.length; i++) {
                     for (let j = 0; j < this.grid[i].length; j++) {
                         const point = this.grid[i][j];
@@ -243,14 +296,20 @@ export class Canvas {
                 }
             }
 
-            // Draw coordinates (top: A-T, left: 1-19) only if showCoordinates is true
-            if (this.showCoordinates && this.grid.length > 0 && this.grid[0].length > 0) {
+            // Draw coordinates (top: A-T, left: 1-19) - always show in viewer mode, otherwise respect showCoordinates setting
+            const shouldShowCoordinates = window.isViewerMode ? true : this.showCoordinates;
+            if (shouldShowCoordinates && this.grid.length > 0 && this.grid[0].length > 0) {
                 const colLabels = [
                     'A','B','C','D','E','F','G','H','J','K','L','M','N','O','P','Q','R','S','T'
                 ]; // Go skips 'I'
                 this.context.save();
-                this.context.font = '24px Arial';
-                this.context.fillStyle = 'white';
+                this.context.font = `${24 * this.getScalingFactor()}px Arial`;
+                
+                // Get coordinate color from coordinate color picker, fallback to white
+                const colorInput = document.getElementById('coordinateColor');
+                const coordinateColor = colorInput ? colorInput.value : 'white';
+                this.context.fillStyle = coordinateColor;
+                
                 this.context.textAlign = 'center';
                 this.context.textBaseline = 'middle';
 
@@ -258,17 +317,21 @@ export class Canvas {
                 for (let j = 0; j < Math.min(19, this.grid[0].length); j++) {
                     const pt = this.grid[0][j];
                     if (pt && pt.length >= 2) {
+                        // Scale coordinates for viewer mode
+                        const [scaledX, scaledY] = this.scaleCoordinates(pt[0], pt[1]);
                         // Place label above the first row
-                        this.context.fillText(colLabels[j], pt[0], pt[1] - 32);
+                        this.context.fillText(colLabels[j], scaledX, scaledY - 32 * this.getScalingFactor());
                     }
                 }
                 // Left labels (rows)
                 for (let i = 0; i < Math.min(19, this.grid.length); i++) {
                     const pt = this.grid[i][0];
                     if (pt && pt.length >= 2) {
+                        // Scale coordinates for viewer mode
+                        const [scaledX, scaledY] = this.scaleCoordinates(pt[0], pt[1]);
                         // Place label to the left of the first column
                         this.context.textAlign = 'right';
-                        this.context.fillText((i+1).toString(), pt[0] - 24, pt[1]);
+                        this.context.fillText((i+1).toString(), scaledX - 24 * this.getScalingFactor(), scaledY);
                         this.context.textAlign = 'center'; // Reset for columns
                     }
                 }
@@ -294,7 +357,7 @@ export class Canvas {
     }
 
     clearCanvas() {
-        this.context.clearRect(0, 0, CONST.CANVAS.WIDTH, CONST.CANVAS.HEIGHT);
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
     drawStones() {
@@ -310,6 +373,9 @@ export class Canvas {
             return;
         }
 
+        // Scale coordinates for viewer mode
+        const [scaledX, scaledY] = this.scaleCoordinates(mouse_x, mouse_y);
+
         // Get base size based on stone type
         const baseSize = this.stoneSizes[stone_color === STONES.BLACK ? 'BLACK' : 
                                       stone_color === STONES.WHITE ? 'WHITE' : 'BOARD'];
@@ -321,13 +387,13 @@ export class Canvas {
         if (stone_color === STONES.BLACK || stone_color === STONES.WHITE) {
             scale = 1.25;
         }
-        const drawSize = stoneSize * scale;
+        const drawSize = stoneSize * scale * this.getScalingFactor();
         const offset = drawSize / 2;
 
         this.context.drawImage(
             stone_color,
-            mouse_x - offset,
-            mouse_y - offset,
+            scaledX - offset,
+            scaledY - offset,
             drawSize,
             drawSize,
         );
@@ -338,6 +404,9 @@ export class Canvas {
             return;
         }
 
+        // Scale coordinates for viewer mode
+        const [scaledX, scaledY] = this.scaleCoordinates(mouse_x, mouse_y);
+
         // Use the stone's base size for marker scaling
         const baseSize = this.stoneSizes[stone_color === STONES.BLACK ? 'BLACK' : 
                                       stone_color === STONES.WHITE ? 'WHITE' : 'BOARD'];
@@ -347,11 +416,11 @@ export class Canvas {
             ? "white"
             : "black";
 
-        this.context.font = `${stoneSize / 3}px Arial`;
+        this.context.font = `${stoneSize / 3 * this.getScalingFactor()}px Arial`;
         this.context.textAlign = "center";
         this.context.textBaseline = "middle";
 
-        this.context.fillText(index + 1, mouse_x, mouse_y);
+        this.context.fillText(index + 1, scaledX, scaledY);
     }
 
     interpolateStoneSize(x, y, baseSize) {
@@ -526,46 +595,63 @@ export class Canvas {
                         }
                     }
                 }
-            } else if (event.button === 0) { // Left click - handle variation stones
-                let existingStoneIndex = this.stones.findIndex(([x, y]) =>
-                    x === point[0] && y === point[1]
-                );
-                if (existingStoneIndex >= 0) {
-                    this.stones.splice(existingStoneIndex, 1);
-                } else {
-                    // Remove any board stone at this position
-                    let existingBoardStoneIndex = this.boardStones.findIndex(([x, y]) =>
-                        x === point[0] && y === point[1]
-                    );
-                    if (existingBoardStoneIndex >= 0) {
-                        this.boardStones.splice(existingBoardStoneIndex, 1);
-                    }
-                    
-                    // Determine which stone to place based on current tool
-                    let stoneToPlace;
-                    if (currentTool === 'BLACK') {
-                        stoneToPlace = 'BLACK';
-                    } else if (currentTool === 'WHITE') {
-                        stoneToPlace = 'WHITE';
-                    } else if (currentTool === 'ALTERNATING') {
-                        stoneToPlace = this.currentColor;
-                    } else {
-                        stoneToPlace = this.currentColor; // fallback
-                    }
-                    
-                    this.stones.push([point[0], point[1], STONES[stoneToPlace]]);
-                    
-                    // Send to viewer if commentator sender is available
-                    if (window.commentatorSender && !window.isViewerMode) {
-                        window.commentatorSender.sendStone(point[0], point[1], stoneToPlace);
-                        
-                        // Also send current grid coordinates with each stone placement
-                        if (this.points && this.points.length === 4) {
-                            window.commentatorSender.sendGridCoordinates(this.points);
-                            debug.log('📐 Sent grid coordinates with stone placement:', this.points);
-                        }
-                    }
-                }
+                         } else if (event.button === 0) { // Left click - handle variation stones
+                 let existingStoneIndex = this.stones.findIndex(([x, y]) =>
+                     x === point[0] && y === point[1]
+                 );
+                 if (existingStoneIndex >= 0) {
+                     // Remove existing stone
+                     this.stones.splice(existingStoneIndex, 1);
+                     
+                     // Send stone removal to viewer
+                     if (window.commentatorSender && !window.isViewerMode) {
+                         window.commentatorSender.sendCommand({
+                             action: 'remove-stone',
+                             x: point[0],
+                             y: point[1],
+                             timestamp: Date.now()
+                         });
+                         
+                         // Also send current grid coordinates with stone removal
+                         if (this.points && this.points.length === 4) {
+                             window.commentatorSender.sendGridCoordinates(this.points);
+                             debug.log('📐 Sent grid coordinates with stone removal:', this.points);
+                         }
+                     }
+                 } else {
+                     // Remove any board stone at this position
+                     let existingBoardStoneIndex = this.boardStones.findIndex(([x, y]) =>
+                         x === point[0] && y === point[1]
+                     );
+                     if (existingBoardStoneIndex >= 0) {
+                         this.boardStones.splice(existingBoardStoneIndex, 1);
+                     }
+                     
+                     // Determine which stone to place based on current tool
+                     let stoneToPlace;
+                     if (currentTool === 'BLACK') {
+                         stoneToPlace = 'BLACK';
+                     } else if (currentTool === 'WHITE') {
+                         stoneToPlace = 'WHITE';
+                     } else if (currentTool === 'ALTERNATING') {
+                         stoneToPlace = this.currentColor;
+                     } else {
+                         stoneToPlace = this.currentColor; // fallback
+                     }
+                     
+                     this.stones.push([point[0], point[1], STONES[stoneToPlace]]);
+                     
+                     // Send to viewer if commentator sender is available
+                     if (window.commentatorSender && !window.isViewerMode) {
+                         window.commentatorSender.sendStone(point[0], point[1], stoneToPlace);
+                         
+                         // Also send current grid coordinates with each stone placement
+                         if (this.points && this.points.length === 4) {
+                             window.commentatorSender.sendGridCoordinates(this.points);
+                             debug.log('📐 Sent grid coordinates with stone placement:', this.points);
+                         }
+                     }
+                 }
                 
                 // Only alternate colors if using ALTERNATING tool and not holding shift
                 if (currentTool === 'ALTERNATING' && !event.shiftKey) {
@@ -711,6 +797,17 @@ export class Canvas {
         return [clientX * scaleX, clientY * scaleY];
     }
 
+    // Get scaling factor for viewer mode (1920/1280 = 1.5)
+    getScalingFactor() {
+        return window.isViewerMode ? 1.5 : 1;
+    }
+
+    // Scale coordinates for viewer mode
+    scaleCoordinates(x, y) {
+        const scale = this.getScalingFactor();
+        return [x * scale, y * scale];
+    }
+
     generateGrid(rawPoints) {
         // Sort points by y-coordinate (ascending), then split into top and bottom pairs
         const sortedByY = rawPoints.slice().sort((a, b) => a[1] - b[1]);
@@ -817,12 +914,21 @@ export class Canvas {
     
     placeStone(x, y, color) {
         // Method for viewer to place stones programmatically
-        // Remove any existing stone at this position
+        // Check if there's already a stone at this position
         let existingStoneIndex = this.stones.findIndex(([stoneX, stoneY]) =>
             stoneX === x && stoneY === y
         );
+        
         if (existingStoneIndex >= 0) {
-            this.stones.splice(existingStoneIndex, 1);
+            // If there's already a stone at this position, check if it's the same color
+            const existingStone = this.stones[existingStoneIndex];
+            if (existingStone[2] === STONES[color]) {
+                // Same stone, same color - do nothing
+                return;
+            } else {
+                // Different color - replace the stone
+                this.stones.splice(existingStoneIndex, 1);
+            }
         } else {
             // Remove any board stone at this position
             let existingBoardStoneIndex = this.boardStones.findIndex(([stoneX, stoneY]) =>
@@ -831,10 +937,10 @@ export class Canvas {
             if (existingBoardStoneIndex >= 0) {
                 this.boardStones.splice(existingBoardStoneIndex, 1);
             }
-            
-            // Add the new stone
-            this.stones.push([x, y, STONES[color]]);
         }
+        
+        // Add the new stone
+        this.stones.push([x, y, STONES[color]]);
     }
     
     placeBoardStone(x, y, action) {
@@ -868,4 +974,4 @@ export class Canvas {
             this.boardStones.push([x, y, STONES.BOARD]);
         }
     }
-} 
+}

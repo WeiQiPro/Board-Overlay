@@ -40,6 +40,12 @@ function updateShareableUrl() {
     if (obsLink) {
         params.set('obs', encodeURIComponent(encodeURIComponent(obsLink)));
     }
+    
+    // Add coordinate color param
+    const coordColor = document.getElementById('coordinateColor')?.value;
+    if (coordColor) {
+        params.set('coord_color', coordColor);
+    }
     // Note: OBS control is now handled through VDO Ninja iframe postMessage system
     let url = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState({}, '', url);
@@ -121,6 +127,13 @@ function loadConfigFromUrl() {
         if (stoneSizeInput) stoneSizeInput.value = stoneSize;
     }
 
+    // Coordinate color
+    const coordColor = params.get('coord_color');
+    if (coordColor) {
+        const coordColorInput = document.getElementById('coordinateColor');
+        if (coordColorInput) coordColorInput.value = coordColor;
+    }
+
     // Grid corners
     const grid = params.get('grid');
     if (grid && window.overlay) {
@@ -169,6 +182,9 @@ function updateSidePanelVisibility() {
 
 function setupViewerMode() {
     debug.log('🎥 Setting up viewer mode');
+    
+    // Add viewer-mode class to body for CSS styling
+    document.body.classList.add('viewer-mode');
     
     // Set everything transparent for OBS
     document.body.style.backgroundColor = 'transparent';
@@ -263,6 +279,12 @@ function generateViewerUrl() {
         }
     }
     
+    // Add coordinate color to viewer URL
+    const coordColorInput = document.getElementById('coordinateColor');
+    if (coordColorInput && coordColorInput.value) {
+        viewerUrl.searchParams.set('coord_color', coordColorInput.value);
+    }
+    
     debug.log('Generated viewer URL:', viewerUrl.toString());
     return viewerUrl.toString();
 }
@@ -296,6 +318,14 @@ function main() {
 
         // 2. Now load config from URL (overlay is defined)
         loadConfigFromUrl();
+        
+        // 2.5. Update canvas dimensions after viewer mode is determined
+        if (overlay && overlay.updateCanvasDimensions) {
+            overlay.updateCanvasDimensions();
+        }
+        if (drawingLayer && drawingLayer.updateCanvasDimensions) {
+            drawingLayer.updateCanvasDimensions();
+        }
 
         // 3. If grid auto-hide was pending, do it now
         if (window._pendingGridAutoHide && !window.isViewerMode) {

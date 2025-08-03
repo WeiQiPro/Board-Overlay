@@ -1,4 +1,5 @@
 import { debug } from '../utils/debugger.js';
+import { STONES } from '../constants.js';
 
 export class CommentatorSender {
     constructor() {
@@ -225,6 +226,10 @@ export class CommentatorSender {
             this.isConnected = true;
             this.startHostPing();
             debug.log('📡 Host ping system started after connection delay');
+            
+            // Start continuous state emission
+            this.startContinuousEmission();
+            debug.log('📡 Continuous state emission started');
         }, 1000); // Reduced from 3000ms to 1000ms for faster reconnection
         
         this.setupPingListener();
@@ -233,6 +238,7 @@ export class CommentatorSender {
     disable() {
         this.enabled = false;
         this.stopHostPing();
+        this.stopContinuousEmission();
         this.isConnected = false;
         
         // Clean up message listener
@@ -342,5 +348,90 @@ export class CommentatorSender {
             points: points,
             timestamp: Date.now()
         });
+        debug.log('📐 Sent grid coordinates to viewers:', points);
+    }
+
+    // Send complete current state to viewers
+    sendCurrentState() {
+        if (!this.enabled || !window.overlay) return;
+
+        // Send grid coordinates if available
+        if (window.overlay.points && window.overlay.points.length === 4) {
+            this.sendGridCoordinates(window.overlay.points);
+        }
+
+        // Send all stones
+        if (window.overlay.stones && window.overlay.stones.length > 0) {
+            window.overlay.stones.forEach(stone => {
+                const [x, y, color] = stone;
+                // Compare with actual STONES constants (imported from constants.js)
+                const colorName = color === STONES.BLACK ? 'BLACK' : 
+                                color === STONES.WHITE ? 'WHITE' : 'BOARD';
+                this.sendStone(x, y, colorName);
+            });
+        }
+
+        // Send all board stones
+        if (window.overlay.boardStones && window.overlay.boardStones.length > 0) {
+            window.overlay.boardStones.forEach(stone => {
+                const [x, y] = stone;
+                this.sendStone(x, y, 'BOARD');
+            });
+        }
+
+        // Send all drawing paths
+        if (window.drawingLayer && window.drawingLayer.paths && window.drawingLayer.paths.length > 0) {
+            window.drawingLayer.paths.forEach(path => {
+                if (path.points && path.points.length > 0) {
+                    this.sendCommand({
+                        action: 'draw-batch',
+                        points: path.points,
+                        color: path.color,
+                        timestamp: Date.now()
+                    });
+                }
+            });
+        }
+
+        // Send all marks
+        if (window.drawingLayer && window.drawingLayer.marks && window.drawingLayer.marks.length > 0) {
+            window.drawingLayer.marks.forEach(mark => {
+                this.sendCommand({
+                    action: 'add-mark',
+                    type: mark.type,
+                    x: mark.x,
+                    y: mark.y,
+                    text: mark.text || '',
+                    timestamp: Date.now()
+                });
+            });
+        }
+
+        debug.log('📡 Sent complete current state to viewers');
+    }
+
+    // Start continuous state emission
+    startContinuousEmission() {
+        if (this.continuousEmissionInterval) {
+            clearInterval(this.continuousEmissionInterval);
+        }
+
+        // Emit state every 5 seconds to ensure viewers stay in sync
+        this.continuousEmissionInterval = setInterval(() => {
+            if (this.enabled) {
+                this.sendCurrentState();
+            }
+        }, 5000);
+
+        debug.log('📡 Started continuous state emission (every 5 seconds)');
+    }
+
+    // Stop continuous state emission
+    stopContinuousEmission() {
+        if (this.continuousEmissionInterval) {
+            clearInterval(this.continuousEmissionInterval);
+            this.continuousEmissionInterval = null;
+            debug.log('📡 Stopped continuous state emission');
+        }
     }
 } 

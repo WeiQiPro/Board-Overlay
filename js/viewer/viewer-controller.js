@@ -209,6 +209,10 @@ export class ViewerController {
                 this.placeStone(command.x, command.y, command.color);
                 break;
                 
+            case 'remove-stone':
+                this.removeStone(command.x, command.y);
+                break;
+                
             case 'draw-tool':
                 this.handleDrawing(command);
                 break;
@@ -249,6 +253,10 @@ export class ViewerController {
                 this.switchCurrentColor(command.color);
                 break;
                 
+            case 'coordinate-color':
+                this.setCoordinateColor(command.color);
+                break;
+                
             default:
                 debug.log('🤷 Unknown command:', command.action);
                 break;
@@ -267,6 +275,28 @@ export class ViewerController {
             if (window.overlay && window.overlay.placeStone) {
                 window.overlay.placeStone(x, y, color);
                 debug.log('🔴 Placed stone at:', x, y, 'color:', color);
+            }
+        }
+    }
+    
+    removeStone(x, y) {
+        if (window.overlay) {
+            // Remove from stones array
+            let existingStoneIndex = window.overlay.stones.findIndex(([stoneX, stoneY]) =>
+                stoneX === x && stoneY === y
+            );
+            if (existingStoneIndex >= 0) {
+                window.overlay.stones.splice(existingStoneIndex, 1);
+                debug.log('🔴 Removed stone at:', x, y);
+            }
+            
+            // Also remove from board stones array
+            let existingBoardStoneIndex = window.overlay.boardStones.findIndex(([stoneX, stoneY]) =>
+                stoneX === x && stoneY === y
+            );
+            if (existingBoardStoneIndex >= 0) {
+                window.overlay.boardStones.splice(existingBoardStoneIndex, 1);
+                debug.log('🔴 Removed board stone at:', x, y);
             }
         }
     }
@@ -307,32 +337,38 @@ export class ViewerController {
         if (color) {
             context.strokeStyle = color;
         }
-        context.lineWidth = 2; // Ensure consistent line width
+        context.lineWidth = 2 * window.drawingLayer.getScalingFactor(); // Scale line width
         context.lineCap = 'round'; // Smooth line ends
         context.lineJoin = 'round'; // Smooth line joins
         
+        // Scale all points for viewer mode
+        const scaledPoints = points.map(point => {
+            return window.drawingLayer.scaleCoordinates(point[0], point[1]);
+        });
+        
         // If we only have one point, draw a small dot
-        if (points.length === 1) {
+        if (scaledPoints.length === 1) {
             context.beginPath();
-            context.arc(points[0][0], points[0][1], 1, 0, 2 * Math.PI);
+            const radius = 1 * window.drawingLayer.getScalingFactor();
+            context.arc(scaledPoints[0][0], scaledPoints[0][1], radius, 0, 2 * Math.PI);
             context.fill();
             return;
         }
         
         // Use quadratic curves for smooth interpolation between points
         context.beginPath();
-        context.moveTo(points[0][0], points[0][1]);
+        context.moveTo(scaledPoints[0][0], scaledPoints[0][1]);
         
         // For smoother curves, we'll use every point as a control point
-        for (let i = 1; i < points.length; i++) {
-            const currentPoint = points[i];
+        for (let i = 1; i < scaledPoints.length; i++) {
+            const currentPoint = scaledPoints[i];
             
-            if (i === points.length - 1) {
+            if (i === scaledPoints.length - 1) {
                 // Last point - draw straight line
                 context.lineTo(currentPoint[0], currentPoint[1]);
             } else {
                 // Use next point to create smooth curve
-                const nextPoint = points[i + 1];
+                const nextPoint = scaledPoints[i + 1];
                 const controlX = (currentPoint[0] + nextPoint[0]) / 2;
                 const controlY = (currentPoint[1] + nextPoint[1]) / 2;
                 
@@ -483,10 +519,24 @@ export class ViewerController {
         debug.log('🖱️ Fake cursor element created');
     }
     
+    // Get scaling factor for viewer mode (1.5 for 1920/1280, 1 for main page)
+    getScalingFactor() {
+        return window.isViewerMode ? 1.5 : 1;
+    }
+    
+    // Scale coordinates from 1280x720 to 1920x1080
+    scaleCoordinates(x, y) {
+        const scale = this.getScalingFactor();
+        return [x * scale, y * scale];
+    }
+    
     updateCursor(x, y) {
-        // Set target position for smooth interpolation (canvas coordinates)
-        this.targetX = x;
-        this.targetY = y;
+        // Scale coordinates from commentator (1280x720) to viewer (1920x1080)
+        const [scaledX, scaledY] = this.scaleCoordinates(x, y);
+        
+        // Set target position for smooth interpolation (scaled canvas coordinates)
+        this.targetX = scaledX;
+        this.targetY = scaledY;
         this.cursorVisible = true;
         
         // Always show cursor when receiving updates
@@ -643,15 +693,22 @@ export class ViewerController {
             window.overlay.isGridSet = true;
             debug.log('📐 Grid coordinates set:', points);
             
-            // Show grid briefly to confirm it was received
-            const wasVisible = window.overlay.show;
-            window.overlay.show = true;
-            window.overlay.updateGridButtonState();
-            
-            setTimeout(() => {
-                window.overlay.show = wasVisible;
+            // In viewer mode, never show grid dots, only coordinates
+            if (window.isViewerMode) {
+                window.overlay.show = false;
                 window.overlay.updateGridButtonState();
-            }, 2000);
+                debug.log('👁️ Grid dots permanently disabled in viewer mode');
+            } else {
+                // Show grid briefly to confirm it was received (host mode only)
+                const wasVisible = window.overlay.show;
+                window.overlay.show = true;
+                window.overlay.updateGridButtonState();
+                
+                setTimeout(() => {
+                    window.overlay.show = wasVisible;
+                    window.overlay.updateGridButtonState();
+                }, 2000);
+            }
         }
     }
     
@@ -710,6 +767,14 @@ export class ViewerController {
         if (window.overlay) {
             window.overlay.currentColor = color;
             debug.log('🎨 Switched current color to:', color);
+        }
+    }
+    
+    setCoordinateColor(color) {
+        const coordColorInput = document.getElementById('coordinateColor');
+        if (coordColorInput) {
+            coordColorInput.value = color;
+            debug.log('🎨 Set coordinate color to:', color);
         }
     }
 } 
